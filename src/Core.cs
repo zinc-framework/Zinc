@@ -140,13 +140,7 @@ public static partial class Engine
 
     static internal void Boot(RunOptions opts)
     {
-        // NativeLibResolver.kick(); //inits the static lib resolver 
-
-        // TryManuallyLoad("sokol");
-        // TryManuallyLoad("stb");
-        // TryManuallyLoad("cute");
-        
-        // Console.WriteLine("booting");
+        NativeLibResolver.kick(); //inits the static lib resolver 
         
         unsafe
         {
