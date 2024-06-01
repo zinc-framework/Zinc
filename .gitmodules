@@ -1,0 +1,6 @@
+[submodule "libs"]
+	path = libs
+	url = https://github.com/zinc-framework/Zinc.Libs
+[submodule "bindings"]
+	path = src/Bindings
+	url = https://github.com/zinc-framework/Zinc.Bindings
