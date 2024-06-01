@@ -508,7 +508,7 @@ public static partial class Engine
         // {
         //     tex.PumpDraw();
         // }
-        drawDebugText(DebugFont.C64,$"MYSTERY DUNGEON HAND PROTOTYPE");
+        // drawDebugText(DebugFont.C64,$"MYSTERY DUNGEON HAND PROTOTYPE");
 
         // setting this to load instead of clear allows us to toggle sokol_gp clearing
         state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_LOAD;
