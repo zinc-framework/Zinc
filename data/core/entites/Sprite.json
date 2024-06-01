@@ -1,0 +1,16 @@
+﻿{
+  "name": "Sprite",
+  "components" : [
+    {
+      "Position" : {
+        "X" : 0,
+        "Y" : 0
+      }
+    },
+    {
+      "SpriteRenderer" : {
+         "Path": ""
+      }
+    }
+  ]
+}

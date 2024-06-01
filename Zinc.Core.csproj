@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Zinc</AssemblyName>
+    <RootNamespace>Zinc</RootNamespace>
+    <LangVersion>default</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Arch" Version="1.2.7" />
+    <PackageReference Include="FontStashSharp" Version="1.3.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+      <Content Include="data\**\*">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="libs\runtimes\**\*">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <PackagePath>runtimes</PackagePath>
+      </Content>
+  </ItemGroup>
+
+  <!-- <ItemGroup>
+    <Folder Include="data\fonts\" />
+  </ItemGroup> -->
+
+</Project>
