@@ -2,7 +2,7 @@
 
 namespace Zinc;
 
-public class ParticleEmitter : Entity
+public partial class ParticleEmitter : Entity
 {
     public ParticleEmitterComponent.EmitterConfig Config;
     public ParticleEmitter(ParticleEmitterComponent.EmitterConfig config, Scene? scene = null, bool startEnabled = true) : base(startEnabled,scene)
@@ -21,7 +21,7 @@ public class ParticleEmitter : Entity
         set
         {
             ref var r = ref ECSEntity.Get<RenderItem>();
-            r.renderOrder = value;
+            r.RenderOrder = value;
             sceneRenderOrder = value;
         }
     }

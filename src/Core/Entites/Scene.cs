@@ -4,7 +4,7 @@ using Zinc.Core;
 
 namespace Zinc;
 
-public class Scene : Entity
+public partial class Scene : Entity
 {
     private int sceneRenderCounter = 0;
     public int GetNextSceneRenderCounter()

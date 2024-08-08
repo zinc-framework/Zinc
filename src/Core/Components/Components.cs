@@ -6,7 +6,15 @@ using static Zinc.Resources;
 
 namespace Zinc;
 
-public record struct RenderItem(int renderOrder);
+public class UseNestedComponentMemberNamesAttribute : System.Attribute {}
+public interface IComponent {}
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
+public class ComponentAttribute<T>(string name = "") : System.Attribute where T : IComponent {}
+
+public record struct RenderItem(int RenderOrder) : IComponent
+{
+    // public int RenderOrder {get; set;}
+}
 public record struct SpriteRenderer
 {
     public Texture Texture { get;  set; }
@@ -28,7 +36,7 @@ public record struct SpriteRenderer
     }
 }
 
-public record struct ShapeRenderer(Color Color, float Width, float Height);
+public record struct ShapeRenderer(Color Color, float Width, float Height) : IComponent;
 public record struct SpriteAnimator(HashSet<Animation> animations)
 {
     public Animation CurrentAnimation { get; private set; } = animations.First();
@@ -226,8 +234,8 @@ public record SceneComponent
 //note that update needs to be tied to a managed entity
 //its assumed that if you are making raw ecs entities you are working with systems
 public record struct UpdateListener(Zinc.Entity e, Action<Zinc.Entity,double> update);
-public record struct Collider(float x, float y, float width, float height, 
-    bool active = false,
+public record struct Collider(float X, float Y, float Width, float Height, 
+    bool Active = false,
     Action<EntityReference,EntityReference> OnStart = null, 
     Action<EntityReference,EntityReference> OnContinue = null, 
     Action<EntityReference,EntityReference> OnEnd = null,
@@ -238,7 +246,7 @@ public record struct Collider(float x, float y, float width, float height,
     Action<Arch.Core.Entity,List<Modifiers>> OnMouseEnter = null,
     Action<Arch.Core.Entity,List<Modifiers>> OnMouseExit = null,
     Action<Arch.Core.Entity,List<Modifiers>> OnMouseOver = null
-    );
+    ) : IComponent;
 
 
 

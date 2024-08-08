@@ -3,7 +3,7 @@ using Arch.Core.Extensions;
 
 namespace Zinc;
 
-public class Sprite : Entity
+public partial class Sprite : Entity
 {
     public SpriteData Data { get; init; }
     public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, 
@@ -38,7 +38,7 @@ public class Sprite : Entity
         set
         {
             ref var c = ref ECSEntity.Get<Collider>();
-            c.active = value;
+            c.Active = value;
             colliderActive = value;
         }
     }
@@ -50,7 +50,7 @@ public class Sprite : Entity
         set
         {
             ref var r = ref ECSEntity.Get<RenderItem>();
-            r.renderOrder = value;
+            r.RenderOrder = value;
             sceneRenderOrder = value;
         }
     }

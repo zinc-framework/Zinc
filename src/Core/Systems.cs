@@ -98,7 +98,7 @@ public class SceneRenderSystem : RenderSystem
                 sceneOrderedEntities.Add((e,r));
             });
 
-            foreach (var item in sceneOrderedEntities.OrderByDescending(x => x.renderItem.renderOrder))
+            foreach (var item in sceneOrderedEntities.OrderByDescending(x => x.renderItem.RenderOrder))
             {
                 ref var p = ref item.entity.Get<Position>();
                 if (item.entity.Has<SpriteRenderer>())
@@ -584,6 +584,7 @@ public class DestructionSystem : DSystem
                 Engine.SceneEntityMap[owner.e.Scene].Remove(owner.e);
             }
         });
+            
         
         Engine.ECSWorld.Query(in eventQuery, (Arch.Core.Entity e, ref CollisionEvent ce) =>
         {
@@ -768,7 +769,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         colliders.Clear();
         Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active a, ref Position p, ref Collider c) =>
         {
-            if(!c.active || !a.active){return;}
+            if(!c.Active || !a.active){return;}
             for (int i = 0; i < colliders.Count; i++)
             {
                 if (e.Id != colliders[i].e.Id && Zinc.Collision.CheckCollision(c,p, colliders[i].c,colliders[i].p))

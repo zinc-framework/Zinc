@@ -135,11 +135,11 @@ public static class Utils
         var pos = new Vector2(entityPosition.x, entityPosition.y);
         
         //get collider points
-        var colliderRoot = new Vector2(c.x - entityPosition.pivotX, c.y - entityPosition.pivotY);
+        var colliderRoot = new Vector2(c.X - entityPosition.pivotX, c.Y - entityPosition.pivotY);
         var topLeft = pos.Translate(colliderRoot);
-        var topRight = pos.Translate(new Vector2(colliderRoot.X + c.width, colliderRoot.Y));
-        var bottomLeft = pos.Translate(new Vector2(colliderRoot.X + c.width, colliderRoot.Y + c.height));
-        var bottomRight = pos.Translate(new Vector2(colliderRoot.X, colliderRoot.Y + c.height));
+        var topRight = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y));
+        var bottomLeft = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y + c.Height));
+        var bottomRight = pos.Translate(new Vector2(colliderRoot.X, colliderRoot.Y + c.Height));
         Vector2[] pts = new Vector2[]
         {
             //working

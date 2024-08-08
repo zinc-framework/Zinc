@@ -167,6 +167,13 @@ public class Entity
         {
             Engine.SceneEntityMap[Scene].Add(this);
         }
+        AddAttributeComponents();
+    }
+
+    //this is populated automatically by the inheriting class and the components it declares in its attributes
+    protected virtual void AddAttributeComponents()
+    {
+
     }
     
     public void Destroy()

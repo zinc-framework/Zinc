@@ -39,7 +39,7 @@ public class AnimatedSprite : Entity
         set
         {
             ref var c = ref ECSEntity.Get<Collider>();
-            c.active = value;
+            c.Active = value;
             colliderActive = value;
         }
     }
@@ -51,7 +51,7 @@ public class AnimatedSprite : Entity
         set
         {
             ref var r = ref ECSEntity.Get<RenderItem>();
-            r.renderOrder = value;
+            r.RenderOrder = value;
             sceneRenderOrder = value;
         }
     }
