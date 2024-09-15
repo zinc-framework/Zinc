@@ -3,55 +3,37 @@ using Arch.Core.Extensions;
 
 namespace Zinc;
 
+[Component<Collider>("Collider")]
+[Component<RenderItem>]
+[Component<SpriteRenderer>]
 public partial class Sprite : Entity
 {
     public SpriteData Data { get; init; }
-    public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, 
-        Action<Entity,double> update = null,
-        Action<EntityReference,EntityReference> collisionStart = null, 
-        Action<EntityReference,EntityReference> collisionStop = null, 
-        Action<EntityReference,EntityReference> collisionContinue = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseUp = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMousePressed = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseDown = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseEnter = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseLeave = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseOver = null,
-        Action<Arch.Core.Entity,List<Modifiers>,float,float> OnMouseScroll = null
-        
-        
-    ) : base(startEnabled,scene,update:update)
+    private readonly Action<EntityBase, double>? _updateWrapper;
+    public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, Action<Sprite,double>? update = null)
+        : base(startEnabled,scene)
     {
         Data = spriteData;
-        sceneRenderOrder = Scene.GetNextSceneRenderCounter();
-        var rend = new SpriteRenderer(Data.Texture, Data.Rect);
-        ECSEntity.Add(
-            rend,
-            new RenderItem(sceneRenderOrder),
-            new Collider(0,0,Data.Rect.width,Data.Rect.height,false,collisionStart,collisionContinue,collisionStop,OnMouseUp, OnMousePressed, OnMouseDown, OnMouseScroll,OnMouseEnter,OnMouseLeave,OnMouseOver));
-    }
-    
-    private bool colliderActive;
-    public bool ColliderActive
-    {
-        get => colliderActive;
-        set
+        RenderOrder = Scene.GetNextSceneRenderCounter();
+        Texture = Data.Texture;
+        Rect = Data.Rect;
+        //TODO: how do we call functions on the component from the entity?
+        // var rend = new SpriteRenderer(Data.Texture, Data.Rect);
+        // the above calls the ctor with a chained update call, but we have to call it here explicitly for setup
+        ECSEntity.Get<SpriteRenderer>().UpdateRect(Data.Rect);
+        Collider_X = 0;
+        Collider_Y = 0;
+        Collider_Width = Data.Rect.width;
+        Collider_Height = Data.Rect.height;
+        Collider_Active = false;
+
+        if (update != null)
         {
-            ref var c = ref ECSEntity.Get<Collider>();
-            c.Active = value;
-            colliderActive = value;
-        }
-    }
-    
-    private int sceneRenderOrder;
-    public int SceneRenderOrder
-    {
-        get => sceneRenderOrder;
-        set
-        {
-            ref var r = ref ECSEntity.Get<RenderItem>();
-            r.RenderOrder = value;
-            sceneRenderOrder = value;
+            _updateWrapper = (baseEntity, dt) =>
+            {
+                update((Sprite)baseEntity, dt);
+            };
+            Update = _updateWrapper;
         }
     }
 }

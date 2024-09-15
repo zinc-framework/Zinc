@@ -92,7 +92,8 @@ public class Grid
         {
             if (i < Points.Count)
             {
-                entities[i].SetPosition((int)Points[i].X,(int)Points[i].Y,entities[i].Rotation,entities[i].ScaleX,entities[i].ScaleY,entities[i].PivotX,entities[i].PivotY);
+                entities[i].X = (int)Points[i].X;
+                entities[i].Y = (int)Points[i].Y;
             }
         }
     }
@@ -104,6 +105,7 @@ public class Grid
             Console.WriteLine("grid index out of bounds");
             return;
         }
-        entity.SetPosition((int)Points[i].X,(int)Points[i].Y,entity.Rotation,entity.ScaleX,entity.ScaleY,entity.PivotX,entity.PivotY);
+        entity.X = (int)Points[i].X;
+        entity.Y = (int)Points[i].Y;
     }
 }

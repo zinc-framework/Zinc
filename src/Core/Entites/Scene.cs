@@ -4,7 +4,9 @@ using Zinc.Core;
 
 namespace Zinc;
 
-public partial class Scene : Entity
+[Component<Position>]
+[Component<SceneComponent>]
+public partial class Scene : EntityBase
 {
     private int sceneRenderCounter = 0;
     public int GetNextSceneRenderCounter()
@@ -35,10 +37,11 @@ public partial class Scene : Entity
 
     public SceneStatus Status = SceneStatus.Inactive; 
     public SceneMountStatus MountStatus = SceneMountStatus.Unmounted; 
-    public SceneLoadStatus LoadStatus = SceneLoadStatus.Unloaded; 
-    public Scene(bool startEnabled = true) : base(startEnabled,null,false)
+    public SceneLoadStatus LoadStatus = SceneLoadStatus.Unloaded;
+
+    public Scene(bool startEnabled = true) : base(startEnabled)
     {
-        ECSEntity.Add(new SceneComponent(Update,this));
+        Engine.SceneLookup.Add(ID,this);
     }
 
     public virtual void Update(double dt){}
@@ -48,7 +51,7 @@ public partial class Scene : Entity
     public void Mount(int depth)
     {
         Engine.MountedScenes.Add(depth,this);
-        Engine.SceneEntityMap.Add(this,new List<Entity>());
+        Engine.SceneEntityMap.Add(ID,new List<int>());
         MountStatus = SceneMountStatus.Mounted;
     }
 
@@ -57,11 +60,12 @@ public partial class Scene : Entity
         if (MountStatus == SceneMountStatus.Mounted)
         {
             Cleanup();
-            var rmentites = new List<Entity>(Engine.SceneEntityMap[this]);
-            foreach (var e in rmentites)
+            foreach (var e in Engine.SceneEntityMap[ID])
             {
-                e.Destroy();
+                Engine.EntityLookup[e].Destroy();
+                Engine.EntityLookup.Remove(e);
             }
+            Engine.SceneEntityMap[ID].Clear();
             Events.SceneUnmounted?.Invoke(this,callback);
         }
     }
