@@ -30,23 +30,23 @@ public interface ICleanupSystem
 
 public class EntityUpdateSystem : DSystem, IUpdateSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,UpdateListener>();
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,EntityID,UpdateListener>();
     public void Update(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active a, ref UpdateListener u) => {
-            if(!a.active){return;}
-            u.update?.Invoke(u.e,dt);
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref EntityID id, ref UpdateListener u) => {
+            if(!a.Active){return;}
+            u.Update?.Invoke(Engine.EntityLookup[id.ID],dt);
         });
     }
 }
 
 public class SceneSystem : DSystem, IUpdateSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,SceneComponent>();      // Should have all specified components
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,SceneComponent>();      // Should have all specified components
     public void Update(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active a, ref SceneComponent scene) => {
-            if(!a.active){return;}
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref SceneComponent scene) => {
+            if(!a.Active){return;}
             if (Engine.MountedScenes.ContainsValue(scene.ManagedScene) && scene.ManagedScene.Status == Scene.SceneStatus.Running)
             {
                 scene.Update(dt);
@@ -67,21 +67,21 @@ public abstract class RenderSystem : DSystem, IPostUpdateSystem
 
 public class SceneRenderSystem : RenderSystem
 {
-    QueryDescription scenes = new QueryDescription().WithAll<Active,SceneComponent>(); 
-    QueryDescription validRenderEntites = new QueryDescription().WithAll<Active,RenderItem,Position>();      
+    QueryDescription scenes = new QueryDescription().WithAll<ActiveState,SceneComponent>(); 
+    QueryDescription validRenderEntites = new QueryDescription().WithAll<ActiveState,RenderItem,Position>();      
 
     
-    QueryDescription renderedSprites = new QueryDescription().WithAll<Active,Position,SpriteRenderer,SceneMember>();      
-    QueryDescription renderedShapes = new QueryDescription().WithAll<Active,Position,ShapeRenderer,SceneMember>();      
-    QueryDescription renderedParticles = new QueryDescription().WithAll<Active,Position,ParticleEmitterComponent,SceneMember>();      
+    QueryDescription renderedSprites = new QueryDescription().WithAll<ActiveState,Position,SpriteRenderer,SceneMember>();      
+    QueryDescription renderedShapes = new QueryDescription().WithAll<ActiveState,Position,ShapeRenderer,SceneMember>();      
+    QueryDescription renderedParticles = new QueryDescription().WithAll<ActiveState,Position,ParticleEmitterComponent,SceneMember>();      
 
     
     private List<Scene> scenesToUpdate = new List<Scene>();
     protected override void Render(double dt)
     {
         scenesToUpdate.Clear();
-        Engine.ECSWorld.Query(in scenes, (Arch.Core.Entity e, ref Active a, ref SceneComponent scene) => {
-            if(!a.active){return;}
+        Engine.ECSWorld.Query(in scenes, (Arch.Core.Entity e, ref ActiveState a, ref SceneComponent scene) => {
+            if(!a.Active){return;}
             if (Engine.MountedScenes.ContainsValue(scene.ManagedScene) && scene.ManagedScene.Status == Scene.SceneStatus.Running)
             {
                 scenesToUpdate.Add(scene.ManagedScene);
@@ -92,9 +92,9 @@ public class SceneRenderSystem : RenderSystem
         foreach (var updatingScene in scenesToUpdate.OrderByDescending(scene => Engine.MountedScenes.First(x => x.Value == scene).Key))
         {
             List< (Arch.Core.Entity entity, RenderItem renderItem)> sceneOrderedEntities = new ();
-            Engine.ECSWorld.Query(in validRenderEntites, (Arch.Core.Entity e, ref Active a, ref RenderItem r) =>
+            Engine.ECSWorld.Query(in validRenderEntites, (Arch.Core.Entity e, ref ActiveState a, ref RenderItem r) =>
             {
-                if(!a.active){return;}
+                if(!a.Active){return;}
                 sceneOrderedEntities.Add((e,r));
             });
 
@@ -146,7 +146,7 @@ public class SceneRenderSystem : RenderSystem
                                 //otherwise remake this particle
                                 emitter.Particles[i].Reset();
                                 emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                                emitter.Particles[i].Config.EmissionPoint = new(p.x, p.y);
+                                emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
                                 emitter.Particles[i].Resolve();
                         
                                 activeIndices.Add(i);
@@ -169,7 +169,7 @@ public class SceneRenderSystem : RenderSystem
                             emitter.Particles[i].Reset();
                             emitter.Particles[i].Active = true;
                             emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                            emitter.Particles[i].Config.EmissionPoint = new(p.x, p.y);
+                            emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
                             emitter.Particles[i].Resolve();
                         
                             activeIndices.Add(i);
@@ -203,12 +203,12 @@ public class SceneRenderSystem : RenderSystem
 
 public class SpriteRenderSystem : RenderSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,Position,SpriteRenderer>();      // Should have all specified components
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,Position,SpriteRenderer>();      // Should have all specified components
     protected override void Render(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active a, ref SpriteRenderer r, ref Position p) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref SpriteRenderer r, ref Position p) =>
         {
-            if(!a.active){return;}
+            if(!a.Active){return;}
             if (!r.Texture.DataLoaded)
             {
                 r.Texture.Load();
@@ -220,12 +220,12 @@ public class SpriteRenderSystem : RenderSystem
 
 public class ShapeRenderSystem : RenderSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,Position,ShapeRenderer>();      // Should have all specified components
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,Position,ShapeRenderer>();      // Should have all specified components
     protected override void Render(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e,ref Active a,  ref ShapeRenderer r, ref Position p) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e,ref ActiveState a,  ref ShapeRenderer r, ref Position p) =>
         {
-            if(!a.active){return;}
+            if(!a.Active){return;}
             Engine.DrawShape(p, r);
         });
     }
@@ -233,12 +233,12 @@ public class ShapeRenderSystem : RenderSystem
 
 public class ParticleRenderSystem : RenderSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,Position,ParticleEmitterComponent>();      // Should have all specified components
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,Position,ParticleEmitterComponent>();      // Should have all specified components
     protected override void Render(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Position p,ref Active a,  ref ParticleEmitterComponent emitter) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Position p,ref ActiveState a,  ref ParticleEmitterComponent emitter) =>
         {
-            if(!a.active){return;}
+            if(!a.Active){return;}
             // Update the particles
             List<int> activeIndices = new List<int>();
             // List<int> newIndicies = new List<int>();
@@ -265,7 +265,7 @@ public class ParticleRenderSystem : RenderSystem
                         //otherwise remake this particle
                         emitter.Particles[i].Reset();
                         emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                        emitter.Particles[i].Config.EmissionPoint = new(p.x, p.y);
+                        emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
                         emitter.Particles[i].Resolve();
                 
                         activeIndices.Add(i);
@@ -288,7 +288,7 @@ public class ParticleRenderSystem : RenderSystem
                     emitter.Particles[i].Reset();
                     emitter.Particles[i].Active = true;
                     emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                    emitter.Particles[i].Config.EmissionPoint = new(p.x, p.y);
+                    emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
                     emitter.Particles[i].Resolve();
                 
                     activeIndices.Add(i);
@@ -543,12 +543,12 @@ public abstract class AnimationSystem : DSystem, IPreUpdateSystem
 
 public class FrameAnimationSystem : AnimationSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,SpriteRenderer,SpriteAnimator>();
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,SpriteRenderer,SpriteAnimator>();
     protected override void Animate(double dt)
     {
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active act, ref SpriteRenderer r, ref SpriteAnimator a) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState act, ref SpriteRenderer r, ref SpriteAnimator a) =>
         {
-            if(!act.active){return;}
+            if(!act.Active){return;}
             if (a.AnimationStarted == false)
             {
                 //we do this to pump the first animation frame to the renderer so we dont render the whole texture first
@@ -759,7 +759,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
  public class CollisionSystem : DSystem, IUpdateSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<Active,Collider,Position>().WithNone<Destroy>();
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,Collider,Position>().WithNone<Destroy>();
     QueryDescription colQuery = new QueryDescription().WithAll<EventMeta,CollisionMeta,CollisionEvent>();
     private List<(Arch.Core.Entity e,Collider c,Position p)> colliders = new();
     
@@ -767,9 +767,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
     public void Update(double dt)
     {
         colliders.Clear();
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref Active a, ref Position p, ref Collider c) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref Position p, ref Collider c) =>
         {
-            if(!c.Active || !a.active){return;}
+            if(!c.Active || !a.Active){return;}
             for (int i = 0; i < colliders.Count; i++)
             {
                 if (e.Id != colliders[i].e.Id && Zinc.Collision.CheckCollision(c,p, colliders[i].c,colliders[i].p))
@@ -933,13 +933,13 @@ public class CoroutineSystem : DSystem, IUpdateSystem
 
 public class DebugOverlaySystem : DSystem, IUpdateSystem
 {
-    QueryDescription colliderDebug = new QueryDescription().WithAll<Active,Collider,Position,HasManagedOwner>();
+    QueryDescription colliderDebug = new QueryDescription().WithAll<ActiveState,Collider,Position,HasManagedOwner>();
     public void Update(double dt)
     {
         Engine.ECSWorld.Query(in colliderDebug,
-            (Arch.Core.Entity e, ref Position p, ref Active a, ref Collider c, ref HasManagedOwner o) =>
+            (Arch.Core.Entity e, ref Position p, ref ActiveState a, ref Collider c, ref HasManagedOwner o) =>
             {
-                if(!a.active){return;}
+                if(!a.Active){return;}
                 if(e.Id == Engine.Cursor.ECSEntity.Id){return;}
                 var bounds = Utils.GetBounds(c, p);
                 float minX = Single.MaxValue, minY = Single.MaxValue, maxX = 0, maxY = 0;
@@ -954,7 +954,7 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                 //cute scaling but kind of bad without state
                 // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
                 // ImGUIHelper.Wrappers.SetNextWindowSize(maxX-minX, maxY-minY);
-                ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(p.x - p.pivotX,p.y - p.pivotY));
+                ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(p.X - p.PivotX,p.Y - p.PivotY));
                 ImGUIHelper.Wrappers.SetNextWindowSize(100,100);
                 ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
                 ImGUIHelper.Wrappers.Begin($"e{e.Id}", 
@@ -963,7 +963,7 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                     ImGuiWindowFlags_.ImGuiWindowFlags_NoMove |
                     ImGuiWindowFlags_.ImGuiWindowFlags_NoResize |
                     ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
-                ImGUIHelper.Wrappers.Text($"{e.Id}\n{p.x},{p.y}\n{o.e.DebugText}");
+                ImGUIHelper.Wrappers.Text($"{e.Id}\n{p.X},{p.Y}\n{o.e.DebugText}");
                 if (Engine.drawDebugColliders)
                 {
                     ImGUIHelper.Wrappers.DrawQuad(bounds);

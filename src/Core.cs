@@ -104,8 +104,9 @@ public static partial class Engine
         TargetScene = s;
     }
 
-    public static Dictionary<Scene, List<Entity>> SceneEntityMap = new();
-
+    public static Dictionary<int, EntityBase> EntityLookup = new();
+    public static Dictionary<int, Scene> SceneLookup = new();
+    public static Dictionary<int, List<int>> SceneEntityMap = new();
     public static Dictionary<int, Scene> MountedScenes = new();
 
     public static List<(Scene scene,Action callback)> scenesStagedForUnmounting = new ();
@@ -545,9 +546,9 @@ public static partial class Engine
         }
     }
 
-    static void UnmountScene((Scene scene,Action callback) s)
+    static void UnmountScene((Scene scene, Action callback) s)
     {
-        SceneEntityMap.Remove(s.scene);
+        SceneEntityMap.Remove(s.scene.sceneID);
         var rm = MountedScenes.Where(x => x.Value == s.scene);
         foreach (var rms in rm)
         {
@@ -595,9 +596,9 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
+        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
+        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -615,9 +616,9 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,i);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
+        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
+        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -636,9 +637,9 @@ public static partial class Engine
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
+        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
+        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
         GP.draw_filled_rect(0,0,r.Width,r.Height);
         GP.pop_transform();
         GP.reset_color();

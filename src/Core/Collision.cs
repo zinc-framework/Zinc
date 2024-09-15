@@ -132,10 +132,10 @@ public static class Utils
     public static Vector2[] GetBounds(Collider c, Position entityPosition)
     {
         //the position of the entity IS the world space pivot
-        var pos = new Vector2(entityPosition.x, entityPosition.y);
+        var pos = new Vector2(entityPosition.X, entityPosition.Y);
         
         //get collider points
-        var colliderRoot = new Vector2(c.X - entityPosition.pivotX, c.Y - entityPosition.pivotY);
+        var colliderRoot = new Vector2(c.X - entityPosition.PivotX, c.Y - entityPosition.PivotY);
         var topLeft = pos.Translate(colliderRoot);
         var topRight = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y));
         var bottomLeft = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y + c.Height));
@@ -143,10 +143,10 @@ public static class Utils
         Vector2[] pts = new Vector2[]
         {
             //working
-            topLeft.Transform(entityPosition.rotation, entityPosition.scaleX, entityPosition.scaleY,pivot:pos),
-            topRight.Transform(entityPosition.rotation, entityPosition.scaleX, entityPosition.scaleY,pivot:pos),
-            bottomLeft.Transform(entityPosition.rotation, entityPosition.scaleX, entityPosition.scaleY,pivot:pos),
-            bottomRight.Transform(entityPosition.rotation, entityPosition.scaleX, entityPosition.scaleY,pivot:pos),
+            topLeft.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
+            topRight.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
+            bottomLeft.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
+            bottomRight.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
         };
 
         // Assuming Transform method correctly applies the pivot and translation.
