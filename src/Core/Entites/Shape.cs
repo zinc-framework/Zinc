@@ -23,10 +23,7 @@ public partial class Shape : Entity
 
         if (update != null)
         {
-            _updateWrapper = (baseEntity, dt) =>
-            {
-                update((Shape)baseEntity, dt);
-            };
+            _updateWrapper = (baseEntity, dt) => update((Shape)baseEntity, dt);
             Update = _updateWrapper;
         }
     }

@@ -3,56 +3,33 @@ using Arch.Core.Extensions;
 
 namespace Zinc;
 
-public class AnimatedSprite : Entity
+[Component<RenderItem>]
+[Component<SpriteRenderer>]
+[Component<Collider>("Collider")]
+[Component<SpriteAnimator>]
+public partial class AnimatedSprite : Entity
 {
     public AnimatedSpriteData Data { get; init; }
-    public AnimatedSprite(AnimatedSpriteData animatedSpriteData, Scene? scene = null, bool startEnabled = true, 
-        Action<Entity,double> update = null,
-        Action<EntityReference,EntityReference> collisionStart = null, 
-        Action<EntityReference,EntityReference> collisionStop = null, 
-        Action<EntityReference,EntityReference> collisionContinue = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseUp = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMousePressed = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseDown = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseEnter = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseLeave = null,
-        Action<Arch.Core.Entity,List<Modifiers>> OnMouseOver = null,
-        Action<Arch.Core.Entity,List<Modifiers>,float,float> OnMouseScroll = null
-        
-        
-    ) : base(startEnabled,scene,update:update)
+    private readonly Action<EntityBase, double>? _updateWrapper;
+    public AnimatedSprite(AnimatedSpriteData animatedSpriteData, Scene? scene = null, bool startEnabled = true, Action<AnimatedSprite,double>? update = null)
+     : base(startEnabled,scene)
     {
         Data = animatedSpriteData;
-        var rend = new SpriteRenderer(Data.Texture, Data.Animations.First().Frames[0]);
-        sceneRenderOrder = Scene.GetNextSceneRenderCounter();
-        ECSEntity.Add(
-            rend,
-            new RenderItem(sceneRenderOrder),
-            new SpriteAnimator(Data.Animations),
-            new Collider(0,0,Data.Animations.First().Frames[0].width,Data.Animations.First().Frames[0].height,false,collisionStart,collisionContinue,collisionStop,OnMouseUp,OnMousePressed, OnMouseDown, OnMouseScroll,OnMouseEnter,OnMouseLeave,OnMouseOver));
-    }
-    
-    private bool colliderActive;
-    public bool ColliderActive
-    {
-        get => colliderActive;
-        set
+        RenderOrder = Scene.GetNextSceneRenderCounter();
+        ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Animations.First().Frames[0]));
+        Animations = Data.Animations;
+
+        Collider_X = 0;
+        Collider_Y = 0;
+        Collider_Width = Data.Animations.First().Frames[0].width;
+        Collider_Height = Data.Animations.First().Frames[0].height;
+        Collider_Active = false;
+        
+
+        if (update != null)
         {
-            ref var c = ref ECSEntity.Get<Collider>();
-            c.Active = value;
-            colliderActive = value;
-        }
-    }
-    
-    private int sceneRenderOrder;
-    public int SceneRenderOrder
-    {
-        get => sceneRenderOrder;
-        set
-        {
-            ref var r = ref ECSEntity.Get<RenderItem>();
-            r.RenderOrder = value;
-            sceneRenderOrder = value;
+            _updateWrapper = (baseEntity, dt) => update((AnimatedSprite)baseEntity, dt);
+            Update = _updateWrapper;
         }
     }
 }

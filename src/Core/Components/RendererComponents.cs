@@ -12,21 +12,24 @@ public record struct SpriteRenderer : IComponent
     public float PivotX;
     public float PivotY;
     public Texture Texture {get; private set;}
-    public Rect Rect { get; private set; }
-    public Rect SizeRect { get; private set; }
+    private Rect rect;
+    public Rect Rect 
+    { 
+        get => rect;
+        set
+        {
+            Console.WriteLine($"Setting SizeRect to {rect.width}x{rect.height}");
+            rect = value;
+            SizeRect = new Rect(rect.width, rect.height);
+        }
+    }
+    public Rect SizeRect { get; private set; } = new Rect(0,0);
     public float Width => SizeRect.width;
     public float Height => SizeRect.height;
     public SpriteRenderer(Texture t, Rect r)
     {
         Texture = t;
         Rect = r;
-        SizeRect = new Rect(0, 0, Rect.width, Rect.height);
-    }
-
-    public void UpdateRect(Rect r)
-    {
-        Rect = r;
-        SizeRect = new Rect(0, 0, Rect.width, Rect.height);
     }
 }
 

@@ -3,7 +3,7 @@ using Zinc.Core;
 
 namespace Zinc;
 
-public record ParticleEmitterComponent
+public partial record ParticleEmitterComponent : IComponent
 {
     public class EmitterConfig
     {

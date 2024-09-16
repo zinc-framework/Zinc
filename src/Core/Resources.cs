@@ -75,6 +75,8 @@ public record Animation(string Name, Rect[] Frames, float animationTime = 1f)
 
 public readonly record struct Rect(float startX, float startY, float width, float height)
 {
+    public Rect(float width, float height) : this(0, 0, width, height) { }
+    public static Rect Empty = new Rect(0, 0, 0, 0);
     public readonly Internal.Sokol.sgp_rect InternalRect { get; } = new sgp_rect()
     {
         x = startX,
@@ -88,7 +90,6 @@ public readonly record struct Rect(float startX, float startY, float width, floa
         return new Rect(tuple.startX, tuple.startY,tuple.width,tuple.height);
     }
 
-    public static Rect Empty = new Rect(0, 0, 0, 0);
 }
 
 

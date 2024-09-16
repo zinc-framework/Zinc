@@ -15,27 +15,8 @@ public partial class Scene : EntityBase
         sceneRenderCounter++;
         return curr;
     }
-    
-    public enum SceneLoadStatus
-    {
-        Unloaded,
-        Loading,
-        Loaded
-    }
 
-    public enum SceneMountStatus
-    {
-        Unmounted,
-        Mounted
-    }
-    public enum SceneStatus
-    {
-        Inactive,
-        Creating,
-        Running
-    }
-
-    public SceneStatus Status = SceneStatus.Inactive; 
+    public SceneActiveStatus Status = SceneActiveStatus.Inactive; 
     public SceneMountStatus MountStatus = SceneMountStatus.Unmounted; 
     public SceneLoadStatus LoadStatus = SceneLoadStatus.Unloaded;
 
@@ -51,11 +32,11 @@ public partial class Scene : EntityBase
     public void Mount(int depth)
     {
         Engine.MountedScenes.Add(depth,this);
-        Engine.SceneEntityMap.Add(ID,new List<int>());
+        Engine.SceneEntityMap.Add(ID,[]);
         MountStatus = SceneMountStatus.Mounted;
     }
 
-    public void Unmount(Action callback = null)
+    public void Unmount(Action? callback = null)
     {
         if (MountStatus == SceneMountStatus.Mounted)
         {
@@ -100,14 +81,31 @@ public partial class Scene : EntityBase
             }
             return;
         }
-        Status = SceneStatus.Creating;
         if (setAsTargetScene)
         {
             Engine.SetTargetScene(this);
         }
         Create();
-        Status = SceneStatus.Running;
+        Status = SceneActiveStatus.Active;
     }
     public virtual void Create(){}
     public virtual void Cleanup(){}
+}
+
+public enum SceneLoadStatus
+{
+    Unloaded,
+    Loading,
+    Loaded
+}
+
+public enum SceneMountStatus
+{
+    Unmounted,
+    Mounted
+}
+public enum SceneActiveStatus
+{
+    Inactive,
+    Active
 }

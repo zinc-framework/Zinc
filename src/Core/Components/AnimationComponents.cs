@@ -1,15 +1,15 @@
 namespace Zinc;
 
-public record struct SpriteAnimator(HashSet<Animation> animations)
+public record struct SpriteAnimator(HashSet<Animation> Animations) : IComponent
 {
-    public Animation CurrentAnimation { get; private set; } = animations.First();
+    public Animation CurrentAnimation { get; private set; } = Animations.First();
     public Rect CurrentAnimationFrame => CurrentAnimation.Frames[animationIndex];
     public double AnimationTime = 0f;
     public bool AnimationStarted = false;
 
     public void SetAnimation(string name)
     {
-        var anim = animations.First(x => x.Name == name);
+        var anim = Animations.First(x => x.Name == name);
         if (anim != null)
         {
             CurrentAnimation = anim;

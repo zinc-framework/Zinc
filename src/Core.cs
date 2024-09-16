@@ -548,13 +548,13 @@ public static partial class Engine
 
     static void UnmountScene((Scene scene, Action callback) s)
     {
-        SceneEntityMap.Remove(s.scene.sceneID);
+        SceneEntityMap.Remove(s.scene.ID);
         var rm = MountedScenes.Where(x => x.Value == s.scene);
         foreach (var rms in rm)
         {
             MountedScenes.Remove(rms.Key);
         }
-        s.scene.MountStatus = Scene.SceneMountStatus.Unmounted;
+        s.scene.MountStatus = SceneMountStatus.Unmounted;
         s.callback?.Invoke();
     }
 

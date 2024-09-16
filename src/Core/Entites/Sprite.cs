@@ -15,12 +15,7 @@ public partial class Sprite : Entity
     {
         Data = spriteData;
         RenderOrder = Scene.GetNextSceneRenderCounter();
-        Texture = Data.Texture;
-        Rect = Data.Rect;
-        //TODO: how do we call functions on the component from the entity?
-        // var rend = new SpriteRenderer(Data.Texture, Data.Rect);
-        // the above calls the ctor with a chained update call, but we have to call it here explicitly for setup
-        ECSEntity.Get<SpriteRenderer>().UpdateRect(Data.Rect);
+        ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Rect));
         Collider_X = 0;
         Collider_Y = 0;
         Collider_Width = Data.Rect.width;
@@ -29,10 +24,7 @@ public partial class Sprite : Entity
 
         if (update != null)
         {
-            _updateWrapper = (baseEntity, dt) =>
-            {
-                update((Sprite)baseEntity, dt);
-            };
+            _updateWrapper = (baseEntity, dt) => update((Sprite)baseEntity, dt);
             Update = _updateWrapper;
         }
     }
