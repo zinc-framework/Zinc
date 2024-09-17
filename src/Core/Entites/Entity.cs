@@ -20,6 +20,7 @@ public partial class EntityBase
         ECSEntityReference = Engine.ECSWorld.Reference(CreateECSEntity(Engine.ECSWorld));
         ID = Engine.GetNextEntityID();
         Engine.EntityLookup.Add(ID, this);
+        Engine.ECSEntityToManagedEntityIDLookup.Add(ECSEntity.Id, ID);
         Active = startEnabled;
     }
     public void Destroy() => ECSEntity.Add<Destroy>();
@@ -27,6 +28,7 @@ public partial class EntityBase
     {
         OnDestroy();
         Engine.EntityLookup.Remove(ID);
+        Engine.ECSEntityToManagedEntityIDLookup.Remove(ECSEntity.Id);
         Engine.ECSWorld.Destroy(ECSEntity);
     }
     protected virtual void OnDestroy() {}

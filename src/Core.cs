@@ -104,6 +104,7 @@ public static partial class Engine
         TargetScene = s;
     }
 
+    public static Dictionary<int, int> ECSEntityToManagedEntityIDLookup = new();
     public static Dictionary<int, EntityBase> EntityLookup = new();
     public static Dictionary<int, Scene> SceneLookup = new();
     public static Dictionary<int, List<int>> SceneEntityMap = new();

@@ -9,8 +9,8 @@ namespace Zinc;
 public record struct RenderItem(int RenderOrder) : IComponent;
 public record struct SpriteRenderer : IComponent
 {
-    public float PivotX;
-    public float PivotY;
+    public float PivotX {get; set;}
+    public float PivotY {get; set;}
     public Texture Texture {get; private set;}
     private Rect rect;
     public Rect Rect 

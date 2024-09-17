@@ -553,7 +553,7 @@ public class FrameAnimationSystem : AnimationSystem
             {
                 //we do this to pump the first animation frame to the renderer so we dont render the whole texture first
                 a.AnimationStarted = true;
-                r.UpdateRect(a.CurrentAnimationFrame);
+                r.Rect = a.CurrentAnimationFrame;
             }
             else
             {
@@ -562,7 +562,7 @@ public class FrameAnimationSystem : AnimationSystem
                 a.TickAnimation();
                     
                 //note that there is currently no binding glue to imply that SpriteAnimator will work directly on an attached SpriteRenderer
-                r.UpdateRect(a.CurrentAnimationFrame);
+                r.Rect = a.CurrentAnimationFrame;
                 a.AnimationTime = 0;
             }
         });
@@ -613,20 +613,28 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             }
         });
 
+        EntityBase entity1 = null;
+        EntityBase entity2 = null;
+        bool e1IsCursor = false;
+        bool e2IsCursor = false;
         Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm, ref EventMeta em) =>
         {
             // Console.WriteLine("HANDLING COLLISION EVENT BETWEEN " + ce.e1.Entity.Get<HasManagedOwner>().e.Name + " and " + ce.e2.Entity.Get<HasManagedOwner>().e.Name + " WITH HASH " + cm.hash);
             if (CollisionEventValid(ref ce))
             {
-                bool e1IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e1.Entity.Id;
-                bool e2IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e2.Entity.Id;
+                entity1 = Engine.EntityLookup[Engine.ECSEntityToManagedEntityIDLookup[ce.e1.Entity.Id]];
+                entity2 = Engine.EntityLookup[Engine.ECSEntityToManagedEntityIDLookup[ce.e2.Entity.Id]];
+                e1IsCursor = entity1 == Engine.Cursor;
+                e2IsCursor = entity2 == Engine.Cursor;
+                // bool e1IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e1.Entity.Id;
+                // bool e2IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e2.Entity.Id;
                 bool finalCollisionValid = false;
                 switch (cm.state)
                 {
                     case CollisionState.Starting:
-                        ce.e1.Entity.Get<Collider>().OnStart?.Invoke(ce.e1,ce.e2);
+                        ce.e1.Entity.Get<Collider>().OnStart?.Invoke(entity1,entity2);
                         if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnStart?.Invoke(ce.e2,ce.e1);
+                            ce.e2.Entity.Get<Collider>().OnStart?.Invoke(entity2,entity1);
                             if (!CollisionEventValid(ref ce)) {
                                 em.dirty = true;
                                 cm.state = CollisionState.Invalid;
@@ -642,9 +650,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                         }
                         break;
                     case CollisionState.Continuing:
-                        ce.e1.Entity.Get<Collider>().OnContinue?.Invoke(ce.e1,ce.e2);
+                        ce.e1.Entity.Get<Collider>().OnContinue?.Invoke(entity1,entity2);
                         if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnContinue?.Invoke(ce.e2, ce.e1);
+                            ce.e2.Entity.Get<Collider>().OnContinue?.Invoke(entity2, entity1);
                             if (!CollisionEventValid(ref ce)) {
                                 em.dirty = true;
                                 cm.state = CollisionState.Invalid;
@@ -661,9 +669,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
     
                         break;
                     case CollisionState.Ending:
-                        ce.e1.Entity.Get<Collider>().OnEnd?.Invoke(ce.e1,ce.e2);
+                        ce.e1.Entity.Get<Collider>().OnEnd?.Invoke(entity1,entity2);
                         if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnEnd?.Invoke(ce.e2,ce.e1);
+                            ce.e2.Entity.Get<Collider>().OnEnd?.Invoke(entity2,entity1);
                             if (!CollisionEventValid(ref ce)) {
                                 em.dirty = true;
                                 cm.state = CollisionState.Invalid;
@@ -716,21 +724,22 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             if (e1IsCursor || e2IsCursor)
             {
                 var target = e1IsCursor ? e2 : e1;
+                var managedtarget = e1IsCursor ? entity2 : entity1;
                 foreach (var me in mouseEvents)
                 {
                     switch (me.mouseState)
                     {
                         case InputSystem.MouseState.Up:
-                            target.Get<Collider>().OnMouseUp?.Invoke(target,me.mods);
+                            target.Get<Collider>().OnMouseUp?.Invoke(managedtarget,me.mods);
                             break;
                         case InputSystem.MouseState.Pressed:
-                            target.Get<Collider>().OnMousePressed?.Invoke(target,me.mods);
+                            target.Get<Collider>().OnMousePressed?.Invoke(managedtarget,me.mods);
                             break;
                         case InputSystem.MouseState.Down:
-                            target.Get<Collider>().OnMouseDown?.Invoke(target,me.mods);
+                            target.Get<Collider>().OnMouseDown?.Invoke(managedtarget,me.mods);
                             break;
                         case InputSystem.MouseState.Scroll:
-                            target.Get<Collider>().OnMouseScroll?.Invoke(target,me.mods,me.scrollX,me.scrollY);
+                            target.Get<Collider>().OnMouseScroll?.Invoke(managedtarget,me.mods,me.scrollX,me.scrollY);
                             break;
                     }
                 }
@@ -738,13 +747,13 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                 switch (collisionState)
                 {
                     case CollisionState.Starting:
-                        target.Get<Collider>().OnMouseEnter?.Invoke(target,Engine.InputSystem.FrameModifiers);
+                        target.Get<Collider>().OnMouseEnter?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
                         break;
                     case CollisionState.Continuing:
-                        target.Get<Collider>().OnMouseOver?.Invoke(target,Engine.InputSystem.FrameModifiers);
+                        target.Get<Collider>().OnMouseOver?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
                         break;
                     case CollisionState.Ending:
-                        target.Get<Collider>().OnMouseExit?.Invoke(target,Engine.InputSystem.FrameModifiers);
+                        target.Get<Collider>().OnMouseExit?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
                         break;
                     case CollisionState.Invalid:
                         break;
@@ -759,7 +768,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
  public class CollisionSystem : DSystem, IUpdateSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<ActiveState,Collider,Position>().WithNone<Destroy>();
+    QueryDescription query = new QueryDescription().WithAll<ActiveState,EntityID,Collider,Position>().WithNone<Destroy>();
     QueryDescription colQuery = new QueryDescription().WithAll<EventMeta,CollisionMeta,CollisionEvent>();
     private List<(Arch.Core.Entity e,Collider c,Position p)> colliders = new();
     
@@ -767,7 +776,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
     public void Update(double dt)
     {
         colliders.Clear();
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref Position p, ref Collider c) =>
+        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref Position p, ref Collider c) =>
         {
             if(!c.Active || !a.Active){return;}
             for (int i = 0; i < colliders.Count; i++)
