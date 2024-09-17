@@ -4,11 +4,12 @@ namespace Zinc;
 
 [Component<RenderItem>]
 [Component<ParticleEmitterComponent>("Emitter")]
-public partial class ParticleEmitter : Entity
+public partial class ParticleEmitter : SceneEntity
 {
     public ParticleEmitterComponent.EmitterConfig Config;
-    private readonly Action<EntityBase, double>? _updateWrapper;
-    public ParticleEmitter(ParticleEmitterComponent.EmitterConfig config, Scene? scene = null, bool startEnabled = true, Action<ParticleEmitter,double>? update = null) : base(startEnabled,scene)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public ParticleEmitter(ParticleEmitterComponent.EmitterConfig config, Scene? scene = null, bool startEnabled = true, Action<ParticleEmitter,double>? update = null, Anchor? parent = null, List<Anchor>? children = null) 
+        : base(startEnabled,scene,parent:parent,children:children)
     {
         Config = config;
         RenderOrder = Scene.GetNextSceneRenderCounter();

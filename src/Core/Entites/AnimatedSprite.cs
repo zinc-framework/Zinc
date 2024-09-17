@@ -7,12 +7,12 @@ namespace Zinc;
 [Component<SpriteRenderer>]
 [Component<Collider>("Collider")]
 [Component<SpriteAnimator>]
-public partial class AnimatedSprite : Entity
+public partial class AnimatedSprite : SceneEntity
 {
     public AnimatedSpriteData Data { get; init; }
-    private readonly Action<EntityBase, double>? _updateWrapper;
-    public AnimatedSprite(AnimatedSpriteData animatedSpriteData, Scene? scene = null, bool startEnabled = true, Action<AnimatedSprite,double>? update = null)
-     : base(startEnabled,scene)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public AnimatedSprite(AnimatedSpriteData animatedSpriteData, Scene? scene = null, bool startEnabled = true, Action<AnimatedSprite,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
+     : base(startEnabled,scene,parent:parent,children:children)
     {
         Data = animatedSpriteData;
         RenderOrder = Scene.GetNextSceneRenderCounter();
