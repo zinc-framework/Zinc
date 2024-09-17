@@ -5,9 +5,9 @@ namespace Zinc;
 [Component<Position>]
 [Component<Collider>("Collider")]
 [Component<UpdateListener>]
-public partial class Pointer : EntityBase
+public partial class Pointer : Entity
 {
-    private readonly Action<EntityBase, double>? _updateWrapper;
+    private readonly Action<Entity, double>? _updateWrapper;
     public Pointer(bool startEnabled = true, Action<Pointer, double>? update = null) : base(startEnabled)
     {
         Collider_X = 0;

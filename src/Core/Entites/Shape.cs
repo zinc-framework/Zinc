@@ -6,11 +6,11 @@ namespace Zinc;
 [Component<RenderItem>]
 [Component<ShapeRenderer>]
 [Component<Collider>("Collider")]
-public partial class Shape : Entity
+public partial class Shape : SceneEntity
 {
-    private readonly Action<EntityBase, double>? _updateWrapper;
-    public Shape(Scene? scene = null, bool startEnabled = true, Action<Shape,double>? update = null)
-        : base(startEnabled,scene)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public Shape(Scene? scene = null, bool startEnabled = true, Action<Shape,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
+        : base(startEnabled,scene,parent:parent,children:children)
     {
         Width = 32;
         Height = 32;

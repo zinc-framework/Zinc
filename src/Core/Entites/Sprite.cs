@@ -6,12 +6,12 @@ namespace Zinc;
 [Component<Collider>("Collider")]
 [Component<RenderItem>]
 [Component<SpriteRenderer>]
-public partial class Sprite : Entity
+public partial class Sprite : SceneEntity
 {
     public SpriteData Data { get; init; }
-    private readonly Action<EntityBase, double>? _updateWrapper;
-    public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, Action<Sprite,double>? update = null)
-        : base(startEnabled,scene)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, Action<Sprite,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
+        : base(startEnabled,scene,parent:parent,children:children)
     {
         Data = spriteData;
         RenderOrder = Scene.GetNextSceneRenderCounter();

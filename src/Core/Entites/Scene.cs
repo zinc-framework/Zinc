@@ -4,10 +4,16 @@ using Zinc.Core;
 
 namespace Zinc;
 
-[Component<Position>]
 [Component<SceneComponent>]
-public partial class Scene : EntityBase
+public partial class Scene : Entity
 {
+    public class SceneRootAnchor(Scene scene) : Anchor(true, scene)
+    {
+        // we hide this ability for SceneRootAnchors
+        new public void SetParent(Anchor parent) {}
+    }
+    public Anchor? Root => root;
+    private SceneRootAnchor? root;
     private int sceneRenderCounter = 0;
     public int GetNextSceneRenderCounter()
     {
@@ -31,8 +37,10 @@ public partial class Scene : EntityBase
  */
     public void Mount(int depth)
     {
-        Engine.MountedScenes.Add(depth,this);
+        Engine.MountedScenes.Add(ID,depth);
         Engine.SceneEntityMap.Add(ID,[]);
+        Console.WriteLine("mounting scene");
+        root = new SceneRootAnchor(this);
         MountStatus = SceneMountStatus.Mounted;
     }
 
@@ -41,11 +49,8 @@ public partial class Scene : EntityBase
         if (MountStatus == SceneMountStatus.Mounted)
         {
             Cleanup();
-            foreach (var e in Engine.SceneEntityMap[ID])
-            {
-                Engine.EntityLookup[e].Destroy();
-                Engine.EntityLookup.Remove(e);
-            }
+            Root!.Destroy();
+            root = null;
             Engine.SceneEntityMap[ID].Clear();
             Events.SceneUnmounted?.Invoke(this,callback);
         }
