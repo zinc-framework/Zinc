@@ -86,7 +86,7 @@ public class Grid
         Console.WriteLine($"{Points[0].X},{Points[0].Y}");
     }
     
-    public void ApplyPositionsToEntites<T>(List<T> entities) where T : Entity
+    public void ApplyPositionsToEntites<T>(List<T> entities) where T : SceneEntity
     {
         for (int i = 0; i < entities.Count; i++)
         {
@@ -98,7 +98,7 @@ public class Grid
         }
     }
 
-    public void ApplyPositionToEntity<T>(int i, T entity) where T : Entity
+    public void ApplyPositionToEntity<T>(int i, T entity) where T : SceneEntity
     {
         if (i >= Points.Count)
         {

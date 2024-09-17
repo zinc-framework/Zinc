@@ -20,6 +20,7 @@ public class FontstashRenderer : IFontStashRenderer
 
 public class FontTexture
 {
+    //TODO: make this its own proper entity
     public uint WHITE = 0xFFFF0000;
     private List<uint> pixels = new();
     public Point Size;
@@ -103,7 +104,7 @@ public class FontTexture
         rect_src.y = src.Value.Y;
         rect_src.w = src.Value.Width;
         rect_src.h = src.Value.Height;
-        batchedDraw.Add((new Position(pos.X,pos.Y,scale.X,scale.Y,rotation,0.5f,0.5f),rect_src));
+        batchedDraw.Add((new Position(pos.X,pos.Y,scale.X,scale.Y,rotation),rect_src));
     }
 
     public void PumpDraw()
@@ -129,7 +130,8 @@ public class FontTexture
 
         foreach (var b in batchedDraw)
         {
-            Engine.DrawTexturedRect(b.pos,internalImage,b.src);
+            //TODO: make this actually work
+            Engine.DrawText(b.pos,new TextRenderer(),internalImage,b.src);
         }
         batchedDraw.Clear();
     }

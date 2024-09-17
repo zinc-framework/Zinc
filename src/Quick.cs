@@ -24,7 +24,7 @@ public static class Quick
         return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
     }
 
-    public static void MoveToMouse(Entity e)
+    public static void MoveToMouse(SceneEntity e)
     {
         e.X = InputSystem.MouseX;
         e.Y = InputSystem.MouseY;
