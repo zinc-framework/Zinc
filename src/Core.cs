@@ -42,7 +42,7 @@ public static partial class Engine
         new FrameAnimationSystem(),
         //update
         InputSystem,
-        new SceneSystem(),
+        new SceneUpdateSystem(),
         new CoroutineSystem(),
         new CollisionSystem(),
         new CollisionCallbackSystem(),
@@ -83,14 +83,14 @@ public static partial class Engine
     public static Scene TargetScene { get; private set; } = GlobalScene;
     public static void SetTargetScene(Scene s)
     {
-        if (s.MountStatus != Scene.SceneMountStatus.Mounted)
+        if (s.MountStatus != SceneMountStatus.Mounted)
         {
             Console.WriteLine("scene must be mounted to be target");
             return;
         }
-        if (s.LoadStatus != Scene.SceneLoadStatus.Loaded)
+        if (s.LoadStatus != SceneLoadStatus.Loaded)
         {
-            if (s.LoadStatus == Scene.SceneLoadStatus.Loading)
+            if (s.LoadStatus == SceneLoadStatus.Loading)
             {
                 Console.WriteLine("scene cant be target until loading finished");
             }
@@ -104,11 +104,26 @@ public static partial class Engine
         TargetScene = s;
     }
 
+    /// <summary>
+    /// Key is the ECSEntity ID, value is the managed entity ID
+    /// </summary>
     public static Dictionary<int, int> ECSEntityToManagedEntityIDLookup = new();
-    public static Dictionary<int, EntityBase> EntityLookup = new();
+    /// <summary>
+    /// Key is the managed entity ID, value is the managed entity
+    /// </summary>
+    public static Dictionary<int, Entity> EntityLookup = new();
+    /// <summary>
+    /// Key is the Scene ID, value is the Scene
+    /// </summary>
     public static Dictionary<int, Scene> SceneLookup = new();
+    /// <summary>
+    /// Key is the Scene ID, value is the list of managed entity IDs
+    /// </summary>
     public static Dictionary<int, List<int>> SceneEntityMap = new();
-    public static Dictionary<int, Scene> MountedScenes = new();
+    /// <summary>
+    /// Key is the ID of the Scene, value is the depth
+    /// </summary>
+    public static Dictionary<int, int> MountedScenes = new();
 
     public static List<(Scene scene,Action callback)> scenesStagedForUnmounting = new ();
     private static bool hasScenesStagedForUnmounting = false;
@@ -326,7 +341,6 @@ public static partial class Engine
         PhysicsWorld = new ();
         ECSWorld = World.Create();
         GlobalScene = new(){Name = "Global Scene"};
-        Cursor = new() { Name = "Cursor" };
 
         
         //USE SOKOL_FONTSTASH - NOT WORKING BECAUSE CANT GENERATE FONTSTASH.H BINDINGS
@@ -348,6 +362,9 @@ public static partial class Engine
         
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
+        
+        Cursor = new() { Name = "Cursor" };
+
         Events.SceneUnmounted += OnSceneUnmounted;
         Setup?.Invoke();
     }
@@ -402,7 +419,8 @@ public static partial class Engine
             ImGUIHelper.Wrappers.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
             foreach (var i in MountedScenes)
             {
-                ImGUIHelper.Wrappers.Text($"{i.Value.Name} {i.Value.Status}");
+                var scene = SceneLookup[i.Key];
+                ImGUIHelper.Wrappers.Text($"{scene.Name} {scene.Status}");
             }
             ImGUIHelper.Wrappers.EndMenu();
         }
@@ -550,11 +568,7 @@ public static partial class Engine
     static void UnmountScene((Scene scene, Action callback) s)
     {
         SceneEntityMap.Remove(s.scene.ID);
-        var rm = MountedScenes.Where(x => x.Value == s.scene);
-        foreach (var rms in rm)
-        {
-            MountedScenes.Remove(rms.Key);
-        }
+        MountedScenes.Remove(s.scene.ID);
         s.scene.MountStatus = SceneMountStatus.Unmounted;
         s.callback?.Invoke();
     }
@@ -597,9 +611,9 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         GP.push_transform();
-        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
-        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
+        GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
+        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -611,15 +625,16 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawTexturedRect(Position p, sg_image i,sgp_rect src)
+    public static void DrawText(Position p, TextRenderer r, sg_image i,sgp_rect src)
     {
+        //NOTE: this doesn't work!
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,i);
         GP.push_transform();
-        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
-        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
+        GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
+        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -638,9 +653,9 @@ public static partial class Engine
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.X - p.PivotX,p.Y - p.PivotY);
-        GP.rotate_at(p.Rotation, p.PivotX, p.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, p.PivotX, p.PivotY);
+        GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
+        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_filled_rect(0,0,r.Width,r.Height);
         GP.pop_transform();
         GP.reset_color();

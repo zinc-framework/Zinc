@@ -14,7 +14,7 @@
     <PackageReference Include="Arch" Version="1.2.7" />
     <PackageReference Include="Depot.SourceGenerator" Version="1.0.5" />
     <PackageReference Include="FontStashSharp" Version="1.3.6" />
-    <PackageReference Include="Zinc.ECSGenerator" Version="1.0.8" />
+    <PackageReference Include="Zinc.ECSGenerator" Version="1.1.0" />
     <PackageReference Include="Zinc.Magic" Version="1.0.1" />
   </ItemGroup>
 
