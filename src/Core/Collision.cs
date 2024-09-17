@@ -28,21 +28,21 @@ public static class Collision
             };
     }
 
-    public static bool CheckCollision(Entity e1, Entity e2)
+    public static bool CheckCollision(SceneEntity e1, SceneEntity e2)
     {
         if (e1.ECSEntity.Has<Collider>() && e2.ECSEntity.Has<Collider>())
         {
-            return CheckCollision(e1.ECSEntity.Get<Collider>(), e1.ECSEntity.Get<Position>(), e2.ECSEntity.Get<Collider>(), e2.ECSEntity.Get<Position>());
+            return CheckCollision(e1.ID, e1.ECSEntity.Get<Collider>(), e2.ID, e2.ECSEntity.Get<Collider>());
         }
         
         Console.WriteLine("entites don't have colliders for collision checking");
         return false;
     }
 
-    public static bool CheckCollision(Collider a, Position app, Collider b, Position bpp)
+    public static bool CheckCollision(int entityA, Collider a, int entityB, Collider b)
     {
-        var ap = Utils.GetColliderBounds(a,app);
-        var bp = Utils.GetColliderBounds(b,bpp);
+        var ap = Utils.GetColliderBounds(entityA,a);
+        var bp = Utils.GetColliderBounds(entityB,b);
         var c = 0;
         unsafe
         {
@@ -58,17 +58,17 @@ public static class Collision
     {
         if (e1.ECSEntity.Has<Collider>() && e2.ECSEntity.Has<Collider>())
         {
-            return GetClosestPoints(e1.ECSEntity.Get<Collider>(), e1.ECSEntity.Get<Position>(), e2.ECSEntity.Get<Collider>(), e2.ECSEntity.Get<Position>());
+            return GetClosestPoints(e1.ID, e1.ECSEntity.Get<Collider>(), e2.ID, e2.ECSEntity.Get<Collider>());
         }
         
         Console.WriteLine("entites don't have colliders for collision checking");
         return (null,null);
     }
     
-    public static (Vector2 a, Vector2 b) GetClosestPoints(Collider a, Position app, Collider b, Position bpp)
+    public static (Vector2 a, Vector2 b) GetClosestPoints(int entityA, Collider a, int entityB, Collider b)
     {
-        var ap = Utils.GetColliderBounds(a,app);
-        var bp = Utils.GetColliderBounds(b,bpp);
+        var ap = Utils.GetColliderBounds(entityA,a);
+        var bp = Utils.GetColliderBounds(entityB,b);
         c2v outA = default;
         c2v outB = default;
         unsafe
@@ -81,21 +81,21 @@ public static class Collision
         return (outA.ToVector2(),outB.ToVector2());
     }
     
-    public static CollisionInfo GetCollisionInfo(Entity e1, Entity e2)
+    public static CollisionInfo GetCollisionInfo(SceneEntity e1, SceneEntity e2)
     {
         if (e1.ECSEntity.Has<Collider>() && e2.ECSEntity.Has<Collider>())
         {
-            return GetCollisionInfo(e1.ECSEntity.Get<Collider>(), e1.ECSEntity.Get<Position>(), e2.ECSEntity.Get<Collider>(), e2.ECSEntity.Get<Position>());
+            return GetCollisionInfo(e1.ID,e1.ECSEntity.Get<Collider>(), e2.ID, e2.ECSEntity.Get<Collider>());
         }
         
         Console.WriteLine("entites don't have colliders for collision checking");
         return null;
     }
-    public static CollisionInfo GetCollisionInfo(Collider a, Position app, Collider b, Position bpp)
+    public static CollisionInfo GetCollisionInfo(int entityA, Collider a, int entityB, Collider b)
     {
         c2Manifold manifold = default;
-        var ap = Utils.GetColliderBounds(a,app);
-        var bp = Utils.GetColliderBounds(b,bpp);
+        var ap = Utils.GetColliderBounds(entityA,a);
+        var bp = Utils.GetColliderBounds(entityB,b);
         unsafe
         {
             fixed (c2Poly* a_ptr = &ap.poly, b_ptr = &bp.poly)
@@ -124,33 +124,21 @@ public static class Collision
 
 public static class Utils
 {
-    public static Polygon GetColliderBounds(Collider c, Position entityPosition)
+    public static Polygon GetColliderBounds(int entityID, Collider c)
     {
-        return new Polygon(4,GetBounds(c,entityPosition));
+        return new Polygon(4,GetBounds(entityID,c));
     }
     
-    public static Vector2[] GetBounds(Collider c, Position entityPosition)
+    public static Vector2[] GetBounds(int entityID, Collider c)
     {
-        //the position of the entity IS the world space pivot
-        var pos = new Vector2(entityPosition.X, entityPosition.Y);
-        
-        //get collider points
-        var colliderRoot = new Vector2(c.X - entityPosition.PivotX, c.Y - entityPosition.PivotY);
-        var topLeft = pos.Translate(colliderRoot);
-        var topRight = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y));
-        var bottomLeft = pos.Translate(new Vector2(colliderRoot.X + c.Width, colliderRoot.Y + c.Height));
-        var bottomRight = pos.Translate(new Vector2(colliderRoot.X, colliderRoot.Y + c.Height));
-        Vector2[] pts = new Vector2[]
-        {
-            //working
-            topLeft.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
-            topRight.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
-            bottomLeft.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
-            bottomRight.Transform(entityPosition.Rotation, entityPosition.ScaleX, entityPosition.ScaleY,pivot:pos),
-        };
-
-        // Assuming Transform method correctly applies the pivot and translation.
-        return pts;
+        var entity = (Engine.EntityLookup[entityID] as Anchor)!;
+        return
+        [
+            entity.GetWorldPosition(new Position(c.X,c.Y)), //top left
+            entity.GetWorldPosition(new Position(c.X + c.Width,c.Y)), // top right
+            entity.GetWorldPosition(new Position(c.X + c.Width,c.Y + c.Height)), // bottom right
+            entity.GetWorldPosition(new Position(c.X,c.Y + c.Height)) //bottom left
+        ];
     }
 
 
