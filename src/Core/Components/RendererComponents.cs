@@ -1,7 +1,3 @@
-using Zinc.Core;
-using System.Numerics;
-using Arch.Core;
-using Zinc.Internal.Sokol;
 using static Zinc.Resources;
 
 namespace Zinc;
@@ -11,7 +7,8 @@ public record struct SpriteRenderer : IComponent
 {
     public float PivotX {get; set;}
     public float PivotY {get; set;}
-    public Texture Texture {get; private set;}
+    Texture texture;
+    public Texture Texture => texture;
     private Rect rect;
     public Rect Rect 
     { 
@@ -20,17 +17,20 @@ public record struct SpriteRenderer : IComponent
         {
             Console.WriteLine($"Setting SizeRect to {rect.width}x{rect.height}");
             rect = value;
-            SizeRect = new Rect(rect.width, rect.height);
+            sizeRect = new Rect(rect.width, rect.height);
         }
     }
-    public Rect SizeRect { get; private set; } = new Rect(0,0);
+    Rect sizeRect = new Rect(0,0);
+    public Rect SizeRect => sizeRect;
     public float Width => SizeRect.width;
     public float Height => SizeRect.height;
     public SpriteRenderer(Texture t, Rect r)
     {
-        Texture = t;
+        texture = t;
         Rect = r;
     }
 }
 
 public record struct ShapeRenderer(Color Color, float Width, float Height, float PivotX, float PivotY) : IComponent;
+//TODO: make this actually work
+public record struct TextRenderer(Color Color, string text,float Width, float Height, float PivotX, float PivotY) : IComponent;

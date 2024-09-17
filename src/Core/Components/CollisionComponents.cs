@@ -16,14 +16,14 @@ public record CollisionEvent(EntityReference e1, EntityReference e2);
 
 public record struct Collider(float X, float Y, float Width, float Height, 
     bool Active = false,
-    Action<EntityBase,EntityBase> OnStart = null, 
-    Action<EntityBase,EntityBase> OnContinue = null, 
-    Action<EntityBase,EntityBase> OnEnd = null,
-    Action<EntityBase,List<Modifiers>> OnMouseUp = null,
-    Action<EntityBase,List<Modifiers>> OnMousePressed = null,
-    Action<EntityBase,List<Modifiers>> OnMouseDown = null,
-    Action<EntityBase,List<Modifiers>,float,float> OnMouseScroll = null,
-    Action<EntityBase,List<Modifiers>> OnMouseEnter = null,
-    Action<EntityBase,List<Modifiers>> OnMouseExit = null,
-    Action<EntityBase,List<Modifiers>> OnMouseOver = null
+    Action<Entity,Entity> OnStart = null, 
+    Action<Entity,Entity> OnContinue = null, 
+    Action<Entity,Entity> OnEnd = null,
+    Action<Entity,List<Modifiers>> OnMouseUp = null,
+    Action<Entity,List<Modifiers>> OnMousePressed = null,
+    Action<Entity,List<Modifiers>> OnMouseDown = null,
+    Action<Entity,List<Modifiers>,float,float> OnMouseScroll = null,
+    Action<Entity,List<Modifiers>> OnMouseEnter = null,
+    Action<Entity,List<Modifiers>> OnMouseExit = null,
+    Action<Entity,List<Modifiers>> OnMouseOver = null
     ) : IComponent;
