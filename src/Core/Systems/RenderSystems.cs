@@ -23,7 +23,7 @@ public abstract class RenderSystem : DSystem, IPostUpdateSystem
 public class SceneRenderSystem : RenderSystem
 {
     QueryDescription scenes = new QueryDescription().WithAll<ActiveState,EntityID,SceneComponent>(); 
-    QueryDescription validRenderEntites = new QueryDescription().WithAll<ActiveState,RenderItem,Position>();      
+    QueryDescription validRenderEntites = new QueryDescription().WithAll<ActiveState,EntityID,SceneMember,RenderItem,Position>();      
 
     
     QueryDescription renderedSprites = new QueryDescription().WithAll<ActiveState,Position,SpriteRenderer,SceneMember>();      
@@ -46,35 +46,37 @@ public class SceneRenderSystem : RenderSystem
         //note that entites are implicitly added to the global scene if no explicit scene is set, so every entity is in a scene
         foreach (var updatingScene in scenesToUpdate.OrderByDescending(scene => Engine.MountedScenes[scene.ID]))
         {
-            List< (Arch.Core.Entity entity, RenderItem renderItem)> sceneOrderedEntities = new ();
-            Engine.ECSWorld.Query(in validRenderEntites, (Arch.Core.Entity e, ref ActiveState a, ref RenderItem r) =>
+            List< (int managedID, RenderItem renderItem)> sceneOrderedEntities = new ();
+            Engine.ECSWorld.Query(in validRenderEntites, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref SceneMember sceneInfo, ref RenderItem r) =>
             {
-                if(!a.Active){return;}
-                sceneOrderedEntities.Add((e,r));
+                if(!a.Active || sceneInfo.SceneID != updatingScene.ID){return;}
+                sceneOrderedEntities.Add((managedID.ID,r));
             });
 
+            Zinc.Entity renderEntity;
             foreach (var item in sceneOrderedEntities.OrderByDescending(x => x.renderItem.RenderOrder))
             {
-                ref var p = ref item.entity.Get<Position>();
-                if (item.entity.Has<SpriteRenderer>())
+                renderEntity = Engine.EntityLookup[item.managedID];
+                if (renderEntity.ECSEntity.Has<SpriteRenderer>())
                 {
-                    ref var r = ref item.entity.Get<SpriteRenderer>();
+                    ref var r = ref renderEntity.ECSEntity.Get<SpriteRenderer>();
                     if (!r.Texture.DataLoaded)
                     {
                         r.Texture.Load();
                     }
-                    Engine.DrawTexturedRect(p,r);
+                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(new Position(r.PivotX,r.PivotY)),r);
                 }
                 
-                else if (item.entity.Has<ShapeRenderer>())
+                else if (renderEntity.ECSEntity.Has<ShapeRenderer>())
                 {
-                    ref var r = ref item.entity.Get<ShapeRenderer>();
-                    Engine.DrawShape(p, r);
+                    ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
+                    Engine.DrawShape((renderEntity as Anchor).GetWorldPosition(), r);
                 }
                 
-                else if (item.entity.Has<ParticleEmitterComponent>())
+                else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
-                    ref var emitter = ref item.entity.Get<ParticleEmitterComponent>();
+                    var p = (renderEntity as Anchor).GetWorldPosition();
+                    ref var emitter = ref renderEntity.ECSEntity.Get<ParticleEmitterComponent>();
                      // Update the particles
                     List<int> activeIndices = new List<int>();
                     // List<int> newIndicies = new List<int>();
