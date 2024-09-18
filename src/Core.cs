@@ -105,10 +105,6 @@ public static partial class Engine
     }
 
     /// <summary>
-    /// Key is the ECSEntity ID, value is the managed entity ID
-    /// </summary>
-    public static Dictionary<int, int> ECSEntityToManagedEntityIDLookup = new();
-    /// <summary>
     /// Key is the managed entity ID, value is the managed entity
     /// </summary>
     public static Dictionary<int, Entity> EntityLookup = new();
@@ -362,7 +358,7 @@ public static partial class Engine
         
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
-        
+
         Cursor = new() { Name = "Cursor" };
 
         Events.SceneUnmounted += OnSceneUnmounted;

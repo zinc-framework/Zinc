@@ -15,8 +15,8 @@ public record struct SpriteRenderer : IComponent
         get => rect;
         set
         {
-            Console.WriteLine($"Setting SizeRect to {rect.width}x{rect.height}");
             rect = value;
+            Console.WriteLine($"Setting SizeRect to {rect.width}x{rect.height}");
             sizeRect = new Rect(rect.width, rect.height);
         }
     }

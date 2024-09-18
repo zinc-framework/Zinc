@@ -17,23 +17,16 @@ public partial class Entity
     public Arch.Core.Entity ECSEntity => ECSEntityReference.Entity;
     public Entity(bool startEnabled)
     {
-        Console.WriteLine("Entity constructor");
         ECSEntityReference = Engine.ECSWorld.Reference(CreateECSEntity(Engine.ECSWorld));
         ID = Engine.GetNextEntityID();
         Engine.EntityLookup.Add(ID, this);
-        Engine.ECSEntityToManagedEntityIDLookup.Add(ECSEntity.Id, ID);
         Active = startEnabled;
     }
-    public void Destroy() => ECSEntity.Add<Destroy>();
-    public void DestroyImmediate(bool removeFromECSWorld = true)
+    public bool StagedForDestruction => ECSEntity.Has<Destroy>();
+    public void Destroy()
     {
         OnDestroy();
-        Engine.EntityLookup.Remove(ID);
-        Engine.ECSEntityToManagedEntityIDLookup.Remove(ECSEntity.Id);
-        if(removeFromECSWorld)
-        {
-            Engine.ECSWorld.Destroy(ECSEntity);
-        }
+        ECSEntity.Add<Destroy>();
     }
     protected virtual void OnDestroy() {}
 }
@@ -52,7 +45,6 @@ public partial class Anchor : Entity
     public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled)
     {
-        Console.WriteLine("Anchor constructor");
         SceneID = scene != null ? scene.ID : Engine.TargetScene.ID;
         Engine.SceneEntityMap[SceneID].Add(ID);
         Anchor? targetParent = null;

@@ -20,13 +20,15 @@ public class DestructionSystem : DSystem
         Engine.ECSWorld.Query(in managedCleanupQuery, (Arch.Core.Entity e, ref EntityID owner) =>
         {
             Console.WriteLine("destroying " + Engine.EntityLookup[owner.ID].Name);
-            Engine.EntityLookup[owner.ID].DestroyImmediate(false);
+            Engine.EntityLookup.Remove(owner.ID);
         });
             
         
         Engine.ECSWorld.Query(in eventQuery, (Arch.Core.Entity e, ref CollisionEvent ce) =>
         {
-            if (!ce.e1.IsAlive() || !ce.e2.IsAlive() || ce.e1.Entity.Has<Destroy>() || ce.e2.Entity.Has<Destroy>())
+            var e1 = Engine.EntityLookup[ce.entity1ManagedID];
+            var e2 = Engine.EntityLookup[ce.entity2ManagedID];
+            if (e1.StagedForDestruction || e2.StagedForDestruction)
             {
                 e.Add(new Destroy());
             }

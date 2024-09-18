@@ -11,7 +11,7 @@ public enum CollisionState
 }
 
 public record struct CollisionMeta(int hash, CollisionState state = CollisionState.Starting);
-public record CollisionEvent(EntityReference e1, EntityReference e2);
+public record CollisionEvent(int entity1ManagedID, int entity2ManagedID);
 
 
 public record struct Collider(float X, float Y, float Width, float Height, 

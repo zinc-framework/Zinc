@@ -14,6 +14,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 {
     QueryDescription query = new QueryDescription().WithAll<CollisionEvent,CollisionMeta,EventMeta>();
     QueryDescription mouseQuery = new QueryDescription().WithAll<MouseEvent,EventMeta>();
+    Entity entity1 = null;
+    Entity entity2 = null;
     public void Update(double dt)
     {
         List<MouseEvent> mouseEvents = new List<MouseEvent>();
@@ -26,111 +28,45 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             }
         });
 
-        Entity entity1 = null;
-        Entity entity2 = null;
-        bool e1IsCursor = false;
-        bool e2IsCursor = false;
+
         Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm, ref EventMeta em) =>
         {
             // Console.WriteLine("HANDLING COLLISION EVENT BETWEEN " + ce.e1.Entity.Get<HasManagedOwner>().e.Name + " and " + ce.e2.Entity.Get<HasManagedOwner>().e.Name + " WITH HASH " + cm.hash);
-            if (CollisionEventValid(ref ce))
+            entity1 = Engine.EntityLookup[ce.entity1ManagedID];
+            entity2 = Engine.EntityLookup[ce.entity2ManagedID];
+            //make sure nothing else has instrcutred us to be destoryed so we are a "valid" destruction
+            if (!entity1.ECSEntity.Has<Destroy>() && !entity2.ECSEntity.Has<Destroy>())
             {
-                entity1 = Engine.EntityLookup[Engine.ECSEntityToManagedEntityIDLookup[ce.e1.Entity.Id]];
-                entity2 = Engine.EntityLookup[Engine.ECSEntityToManagedEntityIDLookup[ce.e2.Entity.Id]];
-                e1IsCursor = entity1 == Engine.Cursor;
-                e2IsCursor = entity2 == Engine.Cursor;
-                // bool e1IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e1.Entity.Id;
-                // bool e2IsCursor = Engine.Cursor.ECSEntityReference.Entity.Id == ce.e2.Entity.Id;
-                bool finalCollisionValid = false;
                 switch (cm.state)
                 {
                     case CollisionState.Starting:
-                        ce.e1.Entity.Get<Collider>().OnStart?.Invoke(entity1,entity2);
-                        if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnStart?.Invoke(entity2,entity1);
-                            if (!CollisionEventValid(ref ce)) {
-                                em.dirty = true;
-                                cm.state = CollisionState.Invalid;
-                            }
-                            else
-                            {
-                                finalCollisionValid = true;
-                            }
-                        } 
-                        else {
-                            em.dirty = true;
-                            cm.state = CollisionState.Invalid;
-                        }
+                        entity1.ECSEntity.Get<Collider>().OnStart?.Invoke(entity1,entity2);
+                        entity2.ECSEntity.Get<Collider>().OnStart?.Invoke(entity2,entity1);
                         break;
                     case CollisionState.Continuing:
-                        ce.e1.Entity.Get<Collider>().OnContinue?.Invoke(entity1,entity2);
-                        if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnContinue?.Invoke(entity2, entity1);
-                            if (!CollisionEventValid(ref ce)) {
-                                em.dirty = true;
-                                cm.state = CollisionState.Invalid;
-                            }
-                            else
-                            {
-                                finalCollisionValid = true;
-                            }
-                        }
-                        else  {
-                            em.dirty = true;
-                            cm.state = CollisionState.Invalid;
-                        }
-    
+                        entity1.ECSEntity.Get<Collider>().OnContinue?.Invoke(entity1,entity2);
+                        entity2.ECSEntity.Get<Collider>().OnContinue?.Invoke(entity2, entity1);
                         break;
                     case CollisionState.Ending:
-                        ce.e1.Entity.Get<Collider>().OnEnd?.Invoke(entity1,entity2);
-                        if (CollisionEventValid(ref ce)) {
-                            ce.e2.Entity.Get<Collider>().OnEnd?.Invoke(entity2,entity1);
-                            if (!CollisionEventValid(ref ce)) {
-                                em.dirty = true;
-                                cm.state = CollisionState.Invalid;
-                            }
-                            else
-                            {
-                                finalCollisionValid = true;
-                            }
-                        }
-                        else {
-                            em.dirty = true;
-                            cm.state = CollisionState.Invalid;
-                        }
+                        entity1.ECSEntity.Get<Collider>().OnEnd?.Invoke(entity1,entity2);
+                        entity2.ECSEntity.Get<Collider>().OnEnd?.Invoke(entity2,entity1);
                         break;
                     case CollisionState.Invalid:
                         em.dirty = true;
                         break;
                 }
 
-                if (finalCollisionValid)
+                if(cm.state != CollisionState.Invalid)
                 {
-                    PropogateMouseEvents(ce.e1.Entity,ce.e2.Entity,e1IsCursor,e2IsCursor,cm.state);
+                    PropogateMouseEvents(entity1.ECSEntity,entity2.ECSEntity,entity1 == Engine.Cursor,entity2 == Engine.Cursor,cm.state);
                 }
             }
-        });
-
-        bool CollisionEventValid(ref CollisionEvent ce)
-        {
-            return entityCheck(ce.e1) && entityCheck(ce.e2);
-
-            bool entityCheck(Arch.Core.EntityReference e)
-            { 
-                return e.Entity.IsAlive() && !e.Entity.Has<Destroy>() && /*(e.Entity.Has<Active>() ? e.Entity.Get<Active>().active : true) &&*/
-                     //this is a hack that gets around a thing i think is happening in arch
-                     //where if i destroy an entity as part of collider iteration, something about the collision event itself
-                     //updates in memory to point to a different entity, so you get weird things where something is "colliding"
-                     //with an event
-                     //https://github.com/genaray/Arch/wiki/Utility-Features#command-buffers
-                     //"Entity creation, deletion, and structural changes can potentially happen during a query or entity iteration.
-                     //However, one must be careful about this, changes to entities during a query can easily lead to unexpected behavior.
-                     //A destruction or structural change leads to a copy to another archetype and the current slot is
-                     //replaced by another entity. This must always be expected. Depending on when and how you perform these
-                     //operations in a query, this can lead to problems or not be noticed at all.
-                     e.Entity.Has<Collider>();
+            else
+            {
+                cm.state = CollisionState.Invalid;
+                em.dirty = true;
             }
-        }
+        });
 
         void PropogateMouseEvents(Arch.Core.Entity e1, Arch.Core.Entity e2, bool e1IsCursor, bool e2IsCursor, CollisionState collisionState)
         {
@@ -186,6 +122,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
     private List<(Arch.Core.Entity e,Collider c,int managedID)> colliders = new();
     
     private Dictionary<int, CollisionEvent> bufferedCollisionEvents = new();
+    Entity entity1 = null;
+    Entity entity2 = null;
     public void Update(double dt)
     {
         colliders.Clear();
@@ -196,12 +134,13 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             {
                 if (e.Id != colliders[i].e.Id && Zinc.Collision.CheckCollision(managedID.ID,colliders[i].c,colliders[i].managedID,colliders[i].c))
                 {
+                    entity1 = Engine.EntityLookup[managedID.ID];
+                    entity2 = Engine.EntityLookup[colliders[i].managedID];
                     // var hash = HashCode.Combine(e.Id, colliders[i].e.Id);
                     var order = new List<int> { e.Id, colliders[i].e.Id }.OrderDescending();
                     var hash = HashCode.Combine(order.First(), order.Last());
-                    var ce = new CollisionEvent(Engine.ECSWorld.Reference(e),
-                        Engine.ECSWorld.Reference(colliders[i].e));
-                    if (!bufferedCollisionEvents.ContainsKey(hash) && CollisionEventValid(ref ce))
+                    var ce = new CollisionEvent(managedID.ID,colliders[i].managedID);
+                    if (!bufferedCollisionEvents.ContainsKey(hash) && CollisionEventValid(entity1,entity2))
                     {
                         bufferedCollisionEvents.Add(
                             hash, ce);
@@ -214,7 +153,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         Engine.ECSWorld.Query(in colQuery,
             (Arch.Core.Entity e, ref CollisionMeta cm, ref EventMeta em, ref CollisionEvent ce) =>
             {
-                if (CollisionEventValid(ref ce) && cm.state != CollisionState.Invalid)
+                entity1 = Engine.EntityLookup[ce.entity1ManagedID];
+                entity2 = Engine.EntityLookup[ce.entity2ManagedID];
+                if (CollisionEventValid(entity1,entity2) && cm.state != CollisionState.Invalid)
                 {
                     em.dirty = false; //keep the event alive
                     if (bufferedCollisionEvents
@@ -253,9 +194,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                 e.Value);
         }
         
-        bool CollisionEventValid(ref CollisionEvent ce)
+        bool CollisionEventValid(Zinc.Entity e1, Zinc.Entity e2)
         {
-            return ce.e1.IsAlive() && ce.e2.IsAlive() && !ce.e1.Entity.Has<Destroy>() && !ce.e2.Entity.Has<Destroy>();
+            return !e1.ECSEntity.Has<Destroy>() && !e2.ECSEntity.Has<Destroy>();
         }
     }
 }
