@@ -11,8 +11,13 @@ public static partial class Assets
         //public Rect R = ... - maybe someway of predeclaring Rects with meta?
         public Sprite ToSprite(Rect? r = null, Scene? scene = null, bool startEnabled = true)
         {
+            return new Sprite(ToSpriteData(r),scene,startEnabled);
+        }
+
+        public SpriteData ToSpriteData(Rect? r = null)
+        {
             Texture.Load();
-            return new Sprite(new SpriteData(Texture,r != null ? (Rect)r : Texture.GetFullRect()),scene,startEnabled);
+            return new SpriteData(Texture,r != null ? (Rect)r : Texture.GetFullRect());
         }
     }
 }
