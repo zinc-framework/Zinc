@@ -45,6 +45,7 @@ public partial class Anchor : Entity
     public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled)
     {
+        Console.WriteLine(ECSEntity.Get<Position>());
         SceneID = scene != null ? scene.ID : Engine.TargetScene.ID;
         Engine.SceneEntityMap[SceneID].Add(ID);
         Anchor? targetParent = null;
@@ -85,18 +86,35 @@ public partial class Anchor : Entity
     }
 
     private Position LocalPosition => ECSEntity.Get<Position>();
-    private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
+    // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
     private Matrix3x2 GetWorldTransform(Position? offset = null)
     {
-        Matrix3x2 worldTransform = !offset.HasValue ? LocalTransform : LocalPosition + offset.Value; 
+        Console.WriteLine("local rotation: " + LocalPosition.Rotation);
+        Console.WriteLine("local scaleX: " + LocalPosition.ScaleX);
+        Console.WriteLine("local scaleY: " + LocalPosition.ScaleY);
+        Matrix3x2 worldTransform = LocalPosition;
+        // if(offset.HasValue)
+        // {
+        //     Console.WriteLine("offset: " + offset);
+        //     // worldTransform = worldTransform * (Matrix3x2)offset.Value; 
+        //     // worldTransform = (Matrix3x2)offset.Value * LocalTransform; 
+        //     worldTransform = LocalTransform * (Matrix3x2)offset.Value; 
+        // }
         var currentAnchor = this;
+        
+        Console.WriteLine("start rotation: " + (float)MathF.Atan2(worldTransform.M12, worldTransform.M11));
 
         while (currentAnchor.parent != null)
         {
-            worldTransform *= currentAnchor.parent.LocalTransform;
             currentAnchor = currentAnchor.parent;
+            // worldTransform = worldTransform * currentAnchor.LocalTransform;
+            worldTransform = currentAnchor.LocalPosition * worldTransform;
+            // worldTransform = Matrix3x2.Multiply(currentAnchor.parent.LocalTransform,worldTransform);
         }
 
+        Console.WriteLine("end rotation: " + (float)MathF.Atan2(worldTransform.M21, worldTransform.M11));
+
+        //log position from matrix
         return worldTransform;
     }
 
@@ -105,13 +123,25 @@ public partial class Anchor : Entity
         var worldTransform = GetWorldTransform(offset);
         // Extract position, scale, and rotation from the matrix
         System.Numerics.Vector2 position = worldTransform.Translation;
-        System.Numerics.Vector2 scale = new System.Numerics.Vector2(
-            (float)Math.Sqrt(worldTransform.M11 * worldTransform.M11 + worldTransform.M21 * worldTransform.M21),
-            (float)Math.Sqrt(worldTransform.M12 * worldTransform.M12 + worldTransform.M22 * worldTransform.M22)
-        );
-        float rotation = (float)Math.Atan2(worldTransform.M21, worldTransform.M11);
 
-        return new Position(position.X, position.Y, scale.X, scale.Y, rotation);
+        // Method 1: Extract scale using vector length
+        // float scaleX = new System.Numerics.Vector2(worldTransform.M11, worldTransform.M21).Length();
+        // float scaleY = new System.Numerics.Vector2(worldTransform.M12, worldTransform.M22).Length();
+
+        // Method 2: Extract scale using Matrix3x2.Multiply
+        var scaleMatrix = Matrix3x2.Multiply(Matrix3x2.CreateScale(((Matrix3x2)LocalPosition).GetDeterminant()), worldTransform);
+        float scaleX = scaleMatrix.M11;
+        float scaleY = scaleMatrix.M22;
+
+        // Extract rotation correctly
+        float rotation = (float)MathF.Atan2(worldTransform.M21, worldTransform.M11);
+
+        // Normalize rotation to range [0, 2π)
+        rotation = (rotation + 2 * MathF.PI) % (2 * MathF.PI);
+
+        Console.WriteLine("rotation: " + rotation);
+
+        return new Position(position.X, position.Y, scaleX, scaleY, rotation);
     }
 }
 

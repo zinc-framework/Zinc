@@ -64,7 +64,7 @@ public class SceneRenderSystem : RenderSystem
                     {
                         r.Texture.Load();
                     }
-                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(new Position(r.PivotX,r.PivotY)),r);
+                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(new Position(-r.PivotX,-r.PivotY)),r);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ShapeRenderer>())

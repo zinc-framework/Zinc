@@ -19,7 +19,7 @@ public partial record struct ParticleEmitterComponent : IComponent
     }
 
     public EmitterConfig Config { get; set; }
-    public List<Particle> Particles = new List<Particle>();
+    public List<Particle> Particles {get; private set;}
     public double Accumulator = 0f;
     public ParticleEmitterComponent(EmitterConfig c)
     {

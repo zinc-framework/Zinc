@@ -607,11 +607,10 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         GP.push_transform();
-        //FIX THIS
-        Console.WriteLine("drawing at " + p.X + "," + p.Y);
         GP.translate(p.X,p.Y);
+        //FIX THIS
         GP.rotate_at(p.Rotation, 0, 0);
-        GP.scale_at(p.ScaleX, p.ScaleY, 0, 0);
+        // GP.scale_at(p.ScaleX, p.ScaleY, 0, 0);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
