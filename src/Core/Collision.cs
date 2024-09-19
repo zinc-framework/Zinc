@@ -131,13 +131,23 @@ public static class Utils
     
     public static Vector2[] GetBounds(int entityID, Collider c)
     {
-        var entity = (Engine.EntityLookup[entityID] as Anchor)!;
+        if(Engine.EntityLookup[entityID] is Anchor a)
+        {
+            return
+            [
+                a.GetWorldPosition(new Position(c.X,c.Y)), //top left
+                a.GetWorldPosition(new Position(c.X + c.Width,c.Y)), // top right
+                a.GetWorldPosition(new Position(c.X + c.Width,c.Y + c.Height)), // bottom right
+                a.GetWorldPosition(new Position(c.X,c.Y + c.Height)) //bottom left
+            ];
+        }
         return
         [
-            entity.GetWorldPosition(new Position(c.X,c.Y)), //top left
-            entity.GetWorldPosition(new Position(c.X + c.Width,c.Y)), // top right
-            entity.GetWorldPosition(new Position(c.X + c.Width,c.Y + c.Height)), // bottom right
-            entity.GetWorldPosition(new Position(c.X,c.Y + c.Height)) //bottom left
+            //dont you dare call this without a position!
+            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
+            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
+            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
+            Engine.EntityLookup[entityID].ECSEntity.Get<Position>()
         ];
     }
 
