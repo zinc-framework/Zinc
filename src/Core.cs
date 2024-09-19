@@ -609,8 +609,8 @@ public static partial class Engine
         GP.push_transform();
         GP.translate(p.X,p.Y);
         //FIX THIS
-        GP.rotate_at(p.Rotation, 0, 0);
-        // GP.scale_at(p.ScaleX, p.ScaleY, 0, 0);
+        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
