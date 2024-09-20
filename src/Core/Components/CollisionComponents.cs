@@ -14,7 +14,7 @@ public record struct CollisionMeta(int hash, CollisionState state = CollisionSta
 public record CollisionEvent(int entity1ManagedID, int entity2ManagedID);
 
 
-public record struct Collider(float X, float Y, float Width, float Height, 
+public record struct Collider(float Width, float Height,float X = 0, float Y = 0, 
     bool Active = false,
     Action<Entity,Entity> OnStart = null, 
     Action<Entity,Entity> OnContinue = null, 

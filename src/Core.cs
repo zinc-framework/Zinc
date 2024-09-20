@@ -601,7 +601,7 @@ public static partial class Engine
         }
     }
 
-    public static void DrawTexturedRect(Position p, SpriteRenderer r)
+    public static void DrawTexturedRect(Position p, SpriteRenderer r, Position pivot)
     {
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
@@ -609,8 +609,8 @@ public static partial class Engine
         GP.push_transform();
         GP.translate(p.X,p.Y);
         //FIX THIS
-        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
+        GP.rotate_at(p.Rotation, pivot.X, pivot.Y);
+        GP.scale_at(p.ScaleX, p.ScaleY, pivot.X, pivot.Y);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -629,9 +629,9 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,i);
         GP.push_transform();
-        GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
-        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
+        // GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
+        // GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        // GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -643,16 +643,16 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawShape(Position p, ShapeRenderer r)
+    public static void DrawShape(Position p, ShapeRenderer r, Position pivot)
     {
         //argb
         //rgba
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
-        GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
-        GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
+        GP.translate(p.X,p.Y);
+        GP.rotate_at(p.Rotation, pivot.X, pivot.Y);
+        GP.scale_at(p.ScaleX, p.ScaleY, pivot.X, pivot.Y);
         GP.draw_filled_rect(0,0,r.Width,r.Height);
         GP.pop_transform();
         GP.reset_color();

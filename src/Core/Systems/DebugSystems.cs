@@ -30,24 +30,31 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                     maxX = b.X > maxX ? b.X : maxX;
                     maxY = b.Y > maxY ? b.Y : maxY;
                 }
-                //cute scaling but kind of bad without state
-                // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
-                // ImGUIHelper.Wrappers.SetNextWindowSize(maxX-minX, maxY-minY);
-                ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(p.X,p.Y));
-                ImGUIHelper.Wrappers.SetNextWindowSize(100,100);
-                ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
-                ImGUIHelper.Wrappers.Begin($"e{e.Id}", 
-                    ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar | 
-                    ImGuiWindowFlags_.ImGuiWindowFlags_NoMouseInputs |
-                    ImGuiWindowFlags_.ImGuiWindowFlags_NoMove |
-                    ImGuiWindowFlags_.ImGuiWindowFlags_NoResize |
-                    ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
-                ImGUIHelper.Wrappers.Text($"{e.Id}\n{p.X},{p.Y}\n{info.DebugText}");
-                if (Engine.drawDebugColliders)
+
+                if(Engine.EntityLookup[o.ID] is Anchor anchor)
                 {
-                    ImGUIHelper.Wrappers.DrawQuad(bounds);
+                    //cute scaling but kind of bad without state
+                    // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
+                    // ImGUIHelper.Wrappers.SetNextWindowSize(maxX-minX, maxY-minY);
+                    var winPos = anchor.GetWorldPosition();
+                    ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(winPos.X,winPos.Y));
+                    ImGUIHelper.Wrappers.SetNextWindowSize(100,100);
+                    ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
+                    ImGUIHelper.Wrappers.Begin($"e{e.Id}", 
+                        ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar | 
+                        ImGuiWindowFlags_.ImGuiWindowFlags_NoMouseInputs |
+                        ImGuiWindowFlags_.ImGuiWindowFlags_NoMove |
+                        ImGuiWindowFlags_.ImGuiWindowFlags_NoResize |
+                        ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
+                    ImGUIHelper.Wrappers.Text($"{e.Id}\n{winPos.X},{winPos.Y}\n{info.DebugText}");
+                    if (Engine.drawDebugColliders)
+                    {
+                        ImGUIHelper.Wrappers.DrawQuad(bounds);
+                    }
+                    ImGUIHelper.Wrappers.DrawQuad([new Vector2(0,0),new Vector2(16,0),new Vector2(16,16),new Vector2(0,16)]);
+                    ImGUIHelper.Wrappers.End();
+
                 }
-                ImGUIHelper.Wrappers.End();
             });
     }
 }

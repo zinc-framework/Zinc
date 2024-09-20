@@ -5,7 +5,7 @@ namespace Zinc;
 
 [Component<Collider>("Collider")]
 [Component<RenderItem>]
-[Component<SpriteRenderer>]
+[Component<SpriteRenderer>("Renderer")]
 public partial class Sprite : SceneEntity
 {
     public SpriteData Data { get; init; }
@@ -13,7 +13,8 @@ public partial class Sprite : SceneEntity
     public Sprite(SpriteData spriteData, Scene? scene = null, bool startEnabled = true, Action<Sprite,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
         : base(startEnabled,scene,parent:parent,children:children)
     {
-        Data = spriteData;
+        Data = spriteData; 
+        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         RenderOrder = Scene.GetNextSceneRenderCounter();
         ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Rect));
         Collider_X = 0;

@@ -1,3 +1,4 @@
+using System.Numerics;
 using static Zinc.Resources;
 
 namespace Zinc;
@@ -5,8 +6,7 @@ namespace Zinc;
 public record struct RenderItem(int RenderOrder) : IComponent;
 public record struct SpriteRenderer : IComponent
 {
-    public float PivotX {get; set;}
-    public float PivotY {get; set;}
+    public Vector2 Pivot { get; set; }
     Texture texture;
     public Texture Texture => texture;
     private Rect rect;
@@ -30,6 +30,9 @@ public record struct SpriteRenderer : IComponent
     }
 }
 
-public record struct ShapeRenderer(Color Color, float Width, float Height, float PivotX, float PivotY) : IComponent;
+
+
+
+public record struct ShapeRenderer(Color Color, float Width, float Height, Vector2 Pivot) : IComponent;
 //TODO: make this actually work
-public record struct TextRenderer(Color Color, string text,float Width, float Height, float PivotX, float PivotY) : IComponent;
+public record struct TextRenderer(Color Color, string text,float Width, float Height) : IComponent;

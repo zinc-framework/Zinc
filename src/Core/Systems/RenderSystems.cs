@@ -64,13 +64,17 @@ public class SceneRenderSystem : RenderSystem
                     {
                         r.Texture.Load();
                     }
-                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(new Position(-r.PivotX,-r.PivotY)),r);
+                    var pivotPos = new Position(r.Width/r.Pivot.X,r.Height/r.Pivot.Y);
+                    // var worldPivot = (renderEntity as Anchor).GetWorldPosition(relativePosition: new Position(-r.PivotX,-r.PivotY));
+                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(new Position(r.Width/r.Pivot.X,r.Height/r.Pivot.Y)),r,pivotPos);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ShapeRenderer>())
                 {
                     ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
-                    Engine.DrawShape((renderEntity as Anchor).GetWorldPosition(new Position(-r.PivotX,-r.PivotY)), r);
+                    var anchor = renderEntity as Anchor;
+                    var pivotPos = new Position(r.Width/r.Pivot.X,r.Height/r.Pivot.Y);
+                    Engine.DrawShape(anchor.GetWorldPosition(new Position(r.Width/r.Pivot.X,r.Height/r.Pivot.Y)), r,pivotPos);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())

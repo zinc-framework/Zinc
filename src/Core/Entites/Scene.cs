@@ -12,7 +12,7 @@ public partial class Scene : Entity
         // we hide this ability for SceneRootAnchors
         new public void SetParent(Anchor parent) {}
     }
-    public Anchor? Root => root;
+    public static implicit operator Anchor(Scene p) => p.root!; 
     private SceneRootAnchor? root;
     private int sceneRenderCounter = 0;
     public int GetNextSceneRenderCounter()
@@ -49,7 +49,7 @@ public partial class Scene : Entity
         if (MountStatus == SceneMountStatus.Mounted)
         {
             Cleanup();
-            Root!.Destroy();
+            root!.Destroy();
             root = null;
             Engine.SceneEntityMap[ID].Clear();
             Events.SceneUnmounted?.Invoke(this,callback);

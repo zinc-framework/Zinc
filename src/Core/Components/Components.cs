@@ -4,7 +4,6 @@ namespace Zinc;
 
 public interface IComponent {}
 
-
 public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float ScaleY = 1, float Rotation = 0f) : IComponent
 {
     public float TextValue = 23;
@@ -12,19 +11,11 @@ public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float 
     {
         // Ensure rotation is in the range [0, 2π)
         float normalizedRotation = (p.Rotation % (2 * MathF.PI) + 2 * MathF.PI) % (2 * MathF.PI);
-        // return Matrix3x2.CreateRotation(normalizedRotation) * 
-        //         Matrix3x2.CreateTranslation(p.X,p.Y) *
-        //         Matrix3x2.CreateScale(p.ScaleX,p.ScaleY); 
         var mat =  Matrix3x2.CreateScale(p.ScaleX, p.ScaleY) *
                 Matrix3x2.CreateRotation(normalizedRotation) *
                 Matrix3x2.CreateTranslation(p.X, p.Y);
         ;
         return  mat; 
-        
-        // return
-        //     Matrix3x2.CreateTranslation(p.X, p.Y) * 
-        //     Matrix3x2.CreateRotation(normalizedRotation) *
-        //     Matrix3x2.CreateScale(p.ScaleX, p.ScaleY);
     }
     
     public static implicit operator Vector2(Position p) =>
