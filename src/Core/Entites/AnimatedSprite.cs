@@ -3,26 +3,22 @@ using Arch.Core.Extensions;
 
 namespace Zinc;
 
-[Component<RenderItem>]
-[Component<SpriteRenderer>]
-[Component<Collider>("Collider")]
 [Component<SpriteAnimator>]
-public partial class AnimatedSprite : SceneEntity
+public partial class AnimatedSprite : Sprite
 {
-    public AnimatedSpriteData Data { get; init; }
+    public new AnimatedSpriteData Data { get; init; }
     private readonly Action<Entity, double>? _updateWrapper;
     public AnimatedSprite(AnimatedSpriteData animatedSpriteData, Scene? scene = null, bool startEnabled = true, Action<AnimatedSprite,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
-     : base(startEnabled,scene,parent:parent,children:children)
+     : base(animatedSpriteData,scene,startEnabled,parent:parent,children:children)
     {
         Data = animatedSpriteData;
+        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         RenderOrder = Scene.GetNextSceneRenderCounter();
-        ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Animations.First().Frames[0]));
         Animations = Data.Animations;
-
-        Collider_X = 0;
-        Collider_Y = 0;
-        Collider_Width = Data.Animations.First().Frames[0].width;
-        Collider_Height = Data.Animations.First().Frames[0].height;
+        var firstFrame = Animations.First().Frames[0];
+        ECSEntity.Set(new SpriteRenderer(Data.Texture, firstFrame));
+        Collider_Width = firstFrame.width;
+        Collider_Height = firstFrame.height;
         Collider_Active = false;
         
 

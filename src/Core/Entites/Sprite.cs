@@ -14,11 +14,9 @@ public partial class Sprite : SceneEntity
         : base(startEnabled,scene,parent:parent,children:children)
     {
         Data = spriteData; 
-        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         RenderOrder = Scene.GetNextSceneRenderCounter();
         ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Rect));
-        Collider_X = 0;
-        Collider_Y = 0;
+        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         Collider_Width = Data.Rect.width;
         Collider_Height = Data.Rect.height;
         Collider_Active = false;

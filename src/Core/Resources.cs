@@ -5,7 +5,7 @@ using Zinc.Internal.STB;
 namespace Zinc;
 
 public record SpriteData(Resources.Texture Texture, Rect Rect);
-public record AnimatedSpriteData(Resources.Texture Texture, HashSet<Animation> Animations);
+public record AnimatedSpriteData(Resources.Texture Texture, HashSet<Animation> Animations) : SpriteData(Texture, Rect.Empty);
 public static class Resources
 {
     // Resources are types that are loadable

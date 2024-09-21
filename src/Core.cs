@@ -601,16 +601,15 @@ public static partial class Engine
         }
     }
 
-    public static void DrawTexturedRect(Position p, SpriteRenderer r, Position pivot)
+    public static void DrawTexturedRect(Position p, SpriteRenderer r)
     {
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         GP.push_transform();
-        GP.translate(p.X,p.Y);
-        //FIX THIS
-        GP.rotate_at(p.Rotation, pivot.X, pivot.Y);
-        GP.scale_at(p.ScaleX, p.ScaleY, pivot.X, pivot.Y);
+        GP.translate(p.X - (r.Pivot.X * r.Width),p.Y - (r.Pivot.Y * r.Height));
+        GP.rotate_at(r.Rotation, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
+        GP.scale_at(p.ScaleX, p.ScaleY, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -643,16 +642,16 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawShape(Position p, ShapeRenderer r, Position pivot)
+    public static void DrawShape(Position p, ShapeRenderer r)
     {
         //argb
         //rgba
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.X,p.Y);
-        GP.rotate_at(p.Rotation, pivot.X, pivot.Y);
-        GP.scale_at(p.ScaleX, p.ScaleY, pivot.X, pivot.Y);
+        GP.translate(p.X - (r.Pivot.X * r.Width),p.Y - (r.Pivot.Y * r.Height));
+        GP.rotate_at(r.Rotation, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
+        GP.scale_at(p.ScaleX, p.ScaleY, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
         GP.draw_filled_rect(0,0,r.Width,r.Height);
         GP.pop_transform();
         GP.reset_color();
