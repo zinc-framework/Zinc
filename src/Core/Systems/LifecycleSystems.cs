@@ -13,26 +13,25 @@ namespace Zinc;
 public class DestructionSystem : DSystem
 {
     QueryDescription query = new QueryDescription().WithAll<Destroy>();
-    QueryDescription eventQuery = new QueryDescription().WithAll<CollisionEvent>();
+    QueryDescription collisionEvents = new QueryDescription().WithAll<CollisionEvent,CollisionMeta>();
     QueryDescription managedCleanupQuery = new QueryDescription().WithAll<Destroy,EntityID>();
     public void DestroyObjects()
     {
+        Engine.ECSWorld.Query(in collisionEvents, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm) =>
+        {
+            if((    Engine.EntityLookup.TryGetValue(ce.entity1ManagedID, out var e1) && e1.StagedForDestruction) 
+                ||  Engine.EntityLookup.TryGetValue(ce.entity2ManagedID, out var e2) && e2.StagedForDestruction)
+            {
+                e.Add(new Destroy());
+            }
+        });
+
         Engine.ECSWorld.Query(in managedCleanupQuery, (Arch.Core.Entity e, ref EntityID owner) =>
         {
             Console.WriteLine("destroying " + Engine.EntityLookup[owner.ID].Name);
             Engine.EntityLookup.Remove(owner.ID);
         });
-            
-        
-        Engine.ECSWorld.Query(in eventQuery, (Arch.Core.Entity e, ref CollisionEvent ce) =>
-        {
-            var e1 = Engine.EntityLookup[ce.entity1ManagedID];
-            var e2 = Engine.EntityLookup[ce.entity2ManagedID];
-            if (e1.StagedForDestruction || e2.StagedForDestruction)
-            {
-                e.Add(new Destroy());
-            }
-        });
+
         Engine.ECSWorld.Destroy(in query);
     }
 }

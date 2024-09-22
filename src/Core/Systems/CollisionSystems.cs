@@ -31,11 +31,10 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
         Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm, ref EventMeta em) =>
         {
-            // Console.WriteLine("HANDLING COLLISION EVENT BETWEEN " + ce.e1.Entity.Get<HasManagedOwner>().e.Name + " and " + ce.e2.Entity.Get<HasManagedOwner>().e.Name + " WITH HASH " + cm.hash);
             entity1 = Engine.EntityLookup[ce.entity1ManagedID];
             entity2 = Engine.EntityLookup[ce.entity2ManagedID];
             //make sure nothing else has instrcutred us to be destoryed so we are a "valid" destruction
-            if (!entity1.ECSEntity.Has<Destroy>() && !entity2.ECSEntity.Has<Destroy>())
+            if (!entity1.StagedForDestruction && !entity2.StagedForDestruction)
             {
                 switch (cm.state)
                 {
@@ -117,7 +116,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
  public class CollisionSystem : DSystem, IUpdateSystem
 {
-    QueryDescription query = new QueryDescription().WithAll<ActiveState,EntityID,Collider,Position>().WithNone<Destroy>();
+    QueryDescription activeColliders = new QueryDescription().WithAll<ActiveState,EntityID,Collider,Position>().WithNone<Destroy>();
     QueryDescription colQuery = new QueryDescription().WithAll<EventMeta,CollisionMeta,CollisionEvent>();
     private List<(Arch.Core.Entity e,Collider c,int managedID)> colliders = new();
     
@@ -127,67 +126,66 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
     public void Update(double dt)
     {
         colliders.Clear();
-        Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref Position p, ref Collider c) =>
+        bufferedCollisionEvents.Clear();
+
+        //run collision checks to find candiates for new collision events and add them to a buffer
+        Engine.ECSWorld.Query(in activeColliders, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref Position p, ref Collider c) =>
         {
             if(!c.Active || !a.Active){return;}
+            //this checks for collisions between all active colliders
+            //could be optimized to only check against colliders in the same scene / layer / etc
             for (int i = 0; i < colliders.Count; i++)
             {
-                if (e.Id != colliders[i].e.Id && Zinc.Collision.CheckCollision(managedID.ID,colliders[i].c,colliders[i].managedID,colliders[i].c))
+                if (e.Id != colliders[i].e.Id  && Zinc.Collision.CheckCollision(managedID.ID,colliders[i].c,colliders[i].managedID,colliders[i].c))
                 {
                     entity1 = Engine.EntityLookup[managedID.ID];
                     entity2 = Engine.EntityLookup[colliders[i].managedID];
-                    // var hash = HashCode.Combine(e.Id, colliders[i].e.Id);
-                    var order = new List<int> { e.Id, colliders[i].e.Id }.OrderDescending();
-                    var hash = HashCode.Combine(order.First(), order.Last());
+                    //we hash off managed entity IDs, as these never repeat or recycle
+                    //hash order is from lowest to highest ID
+                    var hash = entity1.ID > entity2.ID ? HashCode.Combine(entity2.ID, entity1.ID) : HashCode.Combine(entity1.ID, entity2.ID);
                     var ce = new CollisionEvent(managedID.ID,colliders[i].managedID);
-                    if (!bufferedCollisionEvents.ContainsKey(hash) && CollisionEventValid(entity1,entity2))
-                    {
-                        bufferedCollisionEvents.Add(
-                            hash, ce);
-                    }
+                    bufferedCollisionEvents.TryAdd(hash,ce);
                 }
             }
             colliders.Add((e,c,managedID.ID));
         });
         
-        Engine.ECSWorld.Query(in colQuery,
-            (Arch.Core.Entity e, ref CollisionMeta cm, ref EventMeta em, ref CollisionEvent ce) =>
+        //look through all current collision events and either update their state based on our buffered collsiions
+        //or mark them for destruction if they are no longer valid
+        Engine.ECSWorld.Query(in colQuery, (Arch.Core.Entity e, ref CollisionMeta cm, ref EventMeta em, ref CollisionEvent ce) =>
+        {
+            entity1 = Engine.EntityLookup[ce.entity1ManagedID];
+            entity2 = Engine.EntityLookup[ce.entity2ManagedID];
+            if (!entity1.StagedForDestruction && !entity2.StagedForDestruction && cm.state != CollisionState.Invalid)
             {
-                entity1 = Engine.EntityLookup[ce.entity1ManagedID];
-                entity2 = Engine.EntityLookup[ce.entity2ManagedID];
-                if (CollisionEventValid(entity1,entity2) && cm.state != CollisionState.Invalid)
+                em.dirty = false; //keep the event alive
+                if (bufferedCollisionEvents.ContainsKey(cm.hash)) //if we have buffered a collision that already exists
                 {
-                    em.dirty = false; //keep the event alive
-                    if (bufferedCollisionEvents
-                        .ContainsKey(cm.hash)) //if we have buffered a collision that already exists
-                    {
-                        cm.state = CollisionState.Continuing;
-                        bufferedCollisionEvents.Remove(cm.hash);
-                    }
-                    else
-                    {
-                        cm.state = CollisionState.Ending;
-                        em.dirty = true;
-                    }
+                    cm.state = CollisionState.Continuing;
+                    bufferedCollisionEvents.Remove(cm.hash);
                 }
                 else
                 {
-                    //invalid collisions happen if one of the entites is destroyed as part of a callback
-                    //in which case we just mark this dirty and dont touch the state
+                    cm.state = CollisionState.Ending;
                     em.dirty = true;
-                    if (bufferedCollisionEvents
-                        .ContainsKey(cm.hash)) //if we have buffered a collision that already exists
-                    {
-                        bufferedCollisionEvents.Remove(cm.hash);
-                    }
                 }
-            });
+            }
+            else
+            {
+                //invalid collisions happen if one of the entites is destroyed as part of a callback
+                //in which case we just mark this dirty and dont touch the state
+                em.dirty = true;
+                if (bufferedCollisionEvents.ContainsKey(cm.hash)) //if we have buffered a collision that already exists
+                {
+                    bufferedCollisionEvents.Remove(cm.hash);
+                }
+            }
+        });
         
         
 
         foreach (var e in bufferedCollisionEvents)
         {
-            // Console.WriteLine("SPAWNING NEW COLLISION EVENT BETWEEN " + e.Value.e1.Entity.Get<HasManagedOwner>().e.Name + " and " + e.Value.e2.Entity.Get<HasManagedOwner>().e.Name + " WITH HASH " + e.Key);
             Engine.ECSWorld.Create(
                 new EventMeta(e.Value.GetType().ToString()),
                 new CollisionMeta(e.Key),
