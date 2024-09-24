@@ -6,24 +6,32 @@ public interface IComponent {}
 
 public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float ScaleY = 1, float Rotation = 0f) : IComponent
 {
-    public float TextValue = 23;
-    public static implicit operator Matrix3x2(Position p)
+    public static implicit operator Matrix4x4(Position p)
     {
-        // Ensure rotation is in the range [0, 2π)
-        float normalizedRotation = (p.Rotation % (2 * MathF.PI) + 2 * MathF.PI) % (2 * MathF.PI);
-        var mat =  Matrix3x2.CreateScale(p.ScaleX, p.ScaleY) *
-                Matrix3x2.CreateRotation(normalizedRotation) *
-                Matrix3x2.CreateTranslation(p.X, p.Y);
-        ;
-        return  mat; 
+        float normalizedRotation = p.Rotation % (2 * MathF.PI);
+        return Matrix4x4.CreateScale(p.ScaleX, p.ScaleY, 1) *
+               Matrix4x4.CreateRotationZ(normalizedRotation) *
+               Matrix4x4.CreateTranslation(p.X, p.Y, 0);
     }
     
     public static implicit operator Vector2(Position p) =>
         new Vector2(p.X,p.Y); 
-    
-    //override + operator to add two positions together
-    public static Position operator +(Position a, Position b) => 
-        new Position(a.X + b.X, a.Y + b.Y, a.ScaleX + b.ScaleX, a.ScaleY + b.ScaleY, a.Rotation + b.Rotation);
+
+    public static Position FromMatrix(Matrix4x4 matrix)
+    {
+        // Extract position
+        float x = matrix.M41;
+        float y = matrix.M42;
+
+        // Extract scale
+        float scaleX = MathF.Sqrt(matrix.M11 * matrix.M11 + matrix.M21 * matrix.M21);
+        float scaleY = MathF.Sqrt(matrix.M12 * matrix.M12 + matrix.M22 * matrix.M22);
+
+        // Extract rotation
+        float rotation = MathF.Atan2(matrix.M21, matrix.M11);
+
+        return new Position(x, y, scaleX, scaleY, rotation);
+    }
 }
 
 

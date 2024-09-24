@@ -133,39 +133,20 @@ public static class Utils
     {
         if (Engine.GetEntity(entityID) is Anchor anchor)
         {
-            // Get the world transform matrix
-            // Matrix3x2 worldTransform = anchor.GetWorldTransform();
-            var worldTransform = anchor.GetWorldTransform();
-
-            // Calculate the corners in local space
             Vector2[] localCorners = new Vector2[]
             {
-                new Vector2(0, 0),                  // top left
-                new Vector2(c.Width, 0),            // top right
-                new Vector2(c.Width, c.Height),     // bottom right
-                new Vector2(0, c.Height)            // bottom left
+                new Vector2(-c.Width * c.Pivot.X, -c.Height * c.Pivot.Y),
+                new Vector2(c.Width * (1 - c.Pivot.X), -c.Height * c.Pivot.Y),
+                new Vector2(c.Width * (1 - c.Pivot.X), c.Height * (1 - c.Pivot.Y)),
+                new Vector2(-c.Width * c.Pivot.X, c.Height * (1 - c.Pivot.Y))
             };
 
-            // Apply pivot offset
-            Vector2 pivotOffset = new Vector2(
-                -c.Pivot.X * c.Width,
-                -c.Pivot.Y * c.Height
-            );
-
-            // Transform corners to world space
-            return localCorners.Select(corner =>
-            {
-                // Apply pivot offset
-                Vector2 pivotedCorner = corner + pivotOffset;
-
-                // Transform the point using the world transform matrix
-                return Vector2.Transform(pivotedCorner, worldTransform);
-            }).ToArray();
+            return localCorners.Select(corner => Vector2.Transform(corner, anchor.GetWorldPosition())).ToArray();
         }
 
         // Fallback for non-Anchor entities
-        var position = Engine.GetEntity(entityID).ECSEntity.Get<Position>();
-        return new Vector2[] { position, position, position, position };
+        var pos = (Vector2)Engine.GetEntity(entityID).ECSEntity.Get<Position>();
+        return Enumerable.Repeat(pos, 4).ToArray();
     }
 
 }

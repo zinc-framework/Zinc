@@ -95,47 +95,27 @@ public partial class Anchor : Entity
 
     private Position LocalPosition => ECSEntity.Get<Position>();
     // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
-    public Matrix3x2 GetWorldTransform(Position? offset = null)
+    public Matrix4x4 GetWorldTransform(Position? offset = null)
     {
-        Matrix3x2 worldTransform = Matrix3x2.Identity;
+        Matrix4x4 localTransform = LocalPosition;
+
         if (offset.HasValue)
         {
-            worldTransform = (Matrix3x2)offset.Value;
+            localTransform *= (Matrix4x4)offset.Value;
         }
 
-        var currentAnchor = this;
-
-        while (currentAnchor != null)
+        if (Parent != null)
         {
-            worldTransform = (Matrix3x2)currentAnchor.LocalPosition * worldTransform;
-            currentAnchor = currentAnchor.Parent;
+            return localTransform * Parent.GetWorldTransform();
         }
 
-        return worldTransform;
+        return localTransform;
     }
 
     public Position GetWorldPosition(Position? offset = null)
     {
         var worldTransform = GetWorldTransform(offset);
-        // Extract position, scale, and rotation from the matrix
-        System.Numerics.Vector2 position = worldTransform.Translation;
-
-        // Method 1: Extract scale using vector length
-        float scaleX = new System.Numerics.Vector2(worldTransform.M11, worldTransform.M21).Length();
-        float scaleY = new System.Numerics.Vector2(worldTransform.M12, worldTransform.M22).Length();
-
-        // Method 2: Extract scale using Matrix3x2.Multiply
-        // var scaleMatrix = Matrix3x2.Multiply(Matrix3x2.CreateScale(((Matrix3x2)LocalPosition).GetDeterminant()), worldTransform);
-        // float scaleX = scaleMatrix.M11;
-        // float scaleY = scaleMatrix.M22;
-
-        // Extract rotation correctly
-        float rotation = (float)MathF.Atan2(worldTransform.M21, worldTransform.M11);
-
-        // Normalize rotation to range [0, 2π)
-        rotation = (rotation + 2 * MathF.PI) % (2 * MathF.PI);
-
-        return new Position(position.X, position.Y, scaleX, scaleY, rotation);
+        return Position.FromMatrix(worldTransform);
     }
 }
 

@@ -72,8 +72,7 @@ public class SceneRenderSystem : RenderSystem
                     ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
                     var anchor = renderEntity as Anchor;
 
-                    var p = anchor.GetWorldPosition();
-                    Engine.DrawShape(p, r);
+                    Engine.DrawShape(anchor.GetWorldPosition(), r);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())

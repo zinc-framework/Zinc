@@ -28,7 +28,6 @@ public class DestructionSystem : DSystem
 
         Engine.ECSWorld.Query(in managedCleanupQuery, (Arch.Core.Entity e, ref EntityID owner) =>
         {
-            Console.WriteLine("destroying " +  Engine.GetEntity(owner.ID).Name);
             Engine.EntityLookup.Remove(owner.ID);
         });
 

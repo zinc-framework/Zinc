@@ -658,29 +658,14 @@ public static partial class Engine
     {
         //argb
         //rgba
-        // GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
-        // GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
-        // GP.push_transform();
-        // GP.translate(p.X,p.Y);
-        // GP.rotate_at(-p.Rotation,0,0);
-        // GP.scale_at(p.ScaleX, p.ScaleY, 0,0);
-        // GP.push_transform();
-        // GP.translate(-r.Pivot.X * r.Width,-r.Pivot.Y * r.Height);
-        // GP.draw_filled_rect(0,0,r.Width,r.Height);
-        // GP.pop_transform();
-        // GP.pop_transform();
-        // GP.reset_color();
-
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
         GP.translate(p.X, p.Y);
-        GP.rotate(-p.Rotation);
+        GP.rotate(p.Rotation);
         GP.scale(p.ScaleX, p.ScaleY);
-        GP.push_transform();
         GP.translate(-r.Pivot.X * r.Width, -r.Pivot.Y * r.Height);
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
-        GP.pop_transform();
         GP.pop_transform();
         GP.reset_color();
     }
