@@ -654,16 +654,17 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawShape(Position p, ShapeRenderer r)
+    public static void DrawShape(Position worldPos, Position localPos, ShapeRenderer r)
     {
         //argb
         //rgba
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.X, p.Y);
-        GP.rotate(p.Rotation);
-        GP.scale(p.ScaleX, p.ScaleY);
+        GP.translate(worldPos.X, worldPos.Y);
+        GP.rotate(worldPos.Rotation);
+        GP.scale(worldPos.ScaleX, worldPos.ScaleY);
+        // GP.rotate(localPos.Rotation);
         GP.translate(-r.Pivot.X * r.Width, -r.Pivot.Y * r.Height);
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();

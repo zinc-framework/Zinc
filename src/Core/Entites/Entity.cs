@@ -93,30 +93,19 @@ public partial class Anchor : Entity
         Engine.SceneEntityMap[SceneID].Remove(ID);
     }
 
-    private Position LocalPosition => ECSEntity.Get<Position>();
+    public Position LocalPosition => ECSEntity.Get<Position>();
     // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
-    public Matrix4x4 GetWorldTransform(Position? offset = null)
+    public Matrix4x4 GetWorldTransform()
     {
-        Matrix4x4 localTransform = LocalPosition;
-
-        if (offset.HasValue)
-        {
-            localTransform *= (Matrix4x4)offset.Value;
-        }
-
         if (Parent != null)
         {
-            return localTransform * Parent.GetWorldTransform();
+            return LocalPosition * Parent.GetWorldTransform();
         }
 
-        return localTransform;
+        return LocalPosition;
     }
 
-    public Position GetWorldPosition(Position? offset = null)
-    {
-        var worldTransform = GetWorldTransform(offset);
-        return Position.FromMatrix(worldTransform);
-    }
+    public Position GetWorldPosition(Position? offset = null) => GetWorldTransform().ToWorldPosition();
 }
 
 
