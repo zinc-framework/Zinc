@@ -13,6 +13,7 @@ public partial class Shape : SceneEntity
         : base(startEnabled,scene,parent:parent,children:children)
     {
         Renderer_Pivot = new System.Numerics.Vector2(0.5f);
+        Collider_Pivot = new System.Numerics.Vector2(0.5f);
         Renderer_Color = color ?? Palettes.ENDESGA[9];
         Renderer_Width = width;
         Renderer_Height = height;
@@ -21,7 +22,7 @@ public partial class Shape : SceneEntity
         RenderOrder = Scene.GetNextSceneRenderCounter();
         Collider_Active = false;
 
-        if (update != null)
+        if (update != null && _updateWrapper == null)
         {
             _updateWrapper = (baseEntity, dt) => update((Shape)baseEntity, dt);
             Update = _updateWrapper;

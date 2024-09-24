@@ -131,30 +131,46 @@ public static class Utils
     
     public static Vector2[] GetBounds(int entityID, Collider c)
     {
-        if(Engine.EntityLookup[entityID] is Anchor a)
+        if (Engine.GetEntity(entityID) is Anchor anchor)
         {
-            return
-            [
-                a.GetWorldPosition(new Position(c.X,c.Y)), //top left
-                a.GetWorldPosition(new Position(c.X + c.Width,c.Y)), // top right
-                a.GetWorldPosition(new Position(c.X + c.Width,c.Y + c.Height)), // bottom right
-                a.GetWorldPosition(new Position(c.X,c.Y + c.Height)) //bottom left
-            ];
+            // Get the world transform matrix
+            // Matrix3x2 worldTransform = anchor.GetWorldTransform();
+            var worldTransform = anchor.GetWorldTransform();
+
+            // Calculate the corners in local space
+            Vector2[] localCorners = new Vector2[]
+            {
+                new Vector2(0, 0),                  // top left
+                new Vector2(c.Width, 0),            // top right
+                new Vector2(c.Width, c.Height),     // bottom right
+                new Vector2(0, c.Height)            // bottom left
+            };
+
+            // Apply pivot offset
+            Vector2 pivotOffset = new Vector2(
+                -c.Pivot.X * c.Width,
+                -c.Pivot.Y * c.Height
+            );
+
+            // Transform corners to world space
+            return localCorners.Select(corner =>
+            {
+                // Apply pivot offset
+                Vector2 pivotedCorner = corner + pivotOffset;
+
+                // Transform the point using the world transform matrix
+                return Vector2.Transform(pivotedCorner, worldTransform);
+            }).ToArray();
         }
-        return
-        [
-            //dont you dare call this without a position!
-            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
-            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
-            Engine.EntityLookup[entityID].ECSEntity.Get<Position>(),
-            Engine.EntityLookup[entityID].ECSEntity.Get<Position>()
-        ];
+
+        // Fallback for non-Anchor entities
+        var position = Engine.GetEntity(entityID).ECSEntity.Get<Position>();
+        return new Vector2[] { position, position, position, position };
     }
 
-
-
-
 }
+
+
 
 public class Circle(float x, float y, float radius)
 {

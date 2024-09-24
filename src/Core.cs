@@ -43,6 +43,7 @@ public static partial class Engine
         //update
         InputSystem,
         new SceneUpdateSystem(),
+        new TemporaryObjectSystem(),
         new CoroutineSystem(),
         new CollisionSystem(),
         new CollisionCallbackSystem(),
@@ -108,6 +109,14 @@ public static partial class Engine
     /// Key is the managed entity ID, value is the managed entity
     /// </summary>
     public static Dictionary<int, Entity> EntityLookup = new();
+    public static bool TryGetEntity(int id, out Entity e)
+    {
+        return EntityLookup.TryGetValue(id, out e);
+    }
+    public static Entity GetEntity(int id)
+    {
+        return EntityLookup[id];
+    }
     /// <summary>
     /// Key is the Scene ID, value is the Scene
     /// </summary>
@@ -607,15 +616,18 @@ public static partial class Engine
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         GP.push_transform();
-        GP.translate(p.X - (r.Pivot.X * r.Width),p.Y - (r.Pivot.Y * r.Height));
-        GP.rotate_at(r.Rotation, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
-        GP.scale_at(p.ScaleX, p.ScaleY, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
+        GP.translate(p.X,p.Y);
+        GP.rotate_at(-p.Rotation,0,0);
+        GP.scale_at(p.ScaleX, p.ScaleY, 0,0);
+        GP.push_transform();
+        GP.translate(-r.Pivot.X * r.Width,-r.Pivot.Y * r.Height);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
             r.SizeRect.InternalRect,
             //this is the rect index into the texture itself
             r.Rect.InternalRect);
+        GP.pop_transform();
         GP.pop_transform();
         // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
         GP.reset_image(0);
@@ -646,13 +658,29 @@ public static partial class Engine
     {
         //argb
         //rgba
+        // GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
+        // GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
+        // GP.push_transform();
+        // GP.translate(p.X,p.Y);
+        // GP.rotate_at(-p.Rotation,0,0);
+        // GP.scale_at(p.ScaleX, p.ScaleY, 0,0);
+        // GP.push_transform();
+        // GP.translate(-r.Pivot.X * r.Width,-r.Pivot.Y * r.Height);
+        // GP.draw_filled_rect(0,0,r.Width,r.Height);
+        // GP.pop_transform();
+        // GP.pop_transform();
+        // GP.reset_color();
+
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         GP.push_transform();
-        GP.translate(p.X - (r.Pivot.X * r.Width),p.Y - (r.Pivot.Y * r.Height));
-        GP.rotate_at(r.Rotation, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
-        GP.scale_at(p.ScaleX, p.ScaleY, (r.Pivot.X * r.Width), (r.Pivot.Y * r.Height));
-        GP.draw_filled_rect(0,0,r.Width,r.Height);
+        GP.translate(p.X, p.Y);
+        GP.rotate(-p.Rotation);
+        GP.scale(p.ScaleX, p.ScaleY);
+        GP.push_transform();
+        GP.translate(-r.Pivot.X * r.Width, -r.Pivot.Y * r.Height);
+        GP.draw_filled_rect(0, 0, r.Width, r.Height);
+        GP.pop_transform();
         GP.pop_transform();
         GP.reset_color();
     }

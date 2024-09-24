@@ -1,3 +1,4 @@
+using System.Numerics;
 using Arch.Core;
 
 namespace Zinc;
@@ -14,7 +15,7 @@ public record struct CollisionMeta(int hash, CollisionState state = CollisionSta
 public record CollisionEvent(int entity1ManagedID, int entity2ManagedID);
 
 
-public record struct Collider(float Width, float Height,float X = 0, float Y = 0, 
+public record struct Collider(float Width, float Height,Vector2 Pivot, 
     bool Active = false,
     Action<Entity,Entity> OnStart = null, 
     Action<Entity,Entity> OnContinue = null, 

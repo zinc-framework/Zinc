@@ -19,8 +19,8 @@ public class DestructionSystem : DSystem
     {
         Engine.ECSWorld.Query(in collisionEvents, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm) =>
         {
-            if((    Engine.EntityLookup.TryGetValue(ce.entity1ManagedID, out var e1) && e1.StagedForDestruction) 
-                ||  Engine.EntityLookup.TryGetValue(ce.entity2ManagedID, out var e2) && e2.StagedForDestruction)
+            if((    Engine.TryGetEntity(ce.entity1ManagedID, out var e1) && e1.StagedForDestruction) 
+                ||  Engine.TryGetEntity(ce.entity2ManagedID, out var e2) && e2.StagedForDestruction)
             {
                 e.Add(new Destroy());
             }
@@ -28,7 +28,7 @@ public class DestructionSystem : DSystem
 
         Engine.ECSWorld.Query(in managedCleanupQuery, (Arch.Core.Entity e, ref EntityID owner) =>
         {
-            Console.WriteLine("destroying " + Engine.EntityLookup[owner.ID].Name);
+            Console.WriteLine("destroying " +  Engine.GetEntity(owner.ID).Name);
             Engine.EntityLookup.Remove(owner.ID);
         });
 

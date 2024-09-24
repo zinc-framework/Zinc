@@ -31,8 +31,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
         Engine.ECSWorld.Query(in query, (Arch.Core.Entity e, ref CollisionEvent ce, ref CollisionMeta cm, ref EventMeta em) =>
         {
-            entity1 = Engine.EntityLookup[ce.entity1ManagedID];
-            entity2 = Engine.EntityLookup[ce.entity2ManagedID];
+            entity1 = Engine.GetEntity(ce.entity1ManagedID);
+            entity2 = Engine.GetEntity(ce.entity2ManagedID);
             //make sure nothing else has instrcutred us to be destoryed so we are a "valid" destruction
             if (!entity1.StagedForDestruction && !entity2.StagedForDestruction)
             {
@@ -138,8 +138,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             {
                 if (e.Id != colliders[i].e.Id  && Zinc.Collision.CheckCollision(managedID.ID,colliders[i].c,colliders[i].managedID,colliders[i].c))
                 {
-                    entity1 = Engine.EntityLookup[managedID.ID];
-                    entity2 = Engine.EntityLookup[colliders[i].managedID];
+                    entity1 =  Engine.GetEntity(managedID.ID);
+                    entity2 =  Engine.GetEntity(colliders[i].managedID);
                     //we hash off managed entity IDs, as these never repeat or recycle
                     //hash order is from lowest to highest ID
                     var hash = entity1.ID > entity2.ID ? HashCode.Combine(entity2.ID, entity1.ID) : HashCode.Combine(entity1.ID, entity2.ID);
@@ -154,8 +154,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         //or mark them for destruction if they are no longer valid
         Engine.ECSWorld.Query(in colQuery, (Arch.Core.Entity e, ref CollisionMeta cm, ref EventMeta em, ref CollisionEvent ce) =>
         {
-            entity1 = Engine.EntityLookup[ce.entity1ManagedID];
-            entity2 = Engine.EntityLookup[ce.entity2ManagedID];
+            entity1 =  Engine.GetEntity(ce.entity1ManagedID);
+            entity2 =  Engine.GetEntity(ce.entity2ManagedID);
             if (!entity1.StagedForDestruction && !entity2.StagedForDestruction && cm.state != CollisionState.Invalid)
             {
                 em.dirty = false; //keep the event alive

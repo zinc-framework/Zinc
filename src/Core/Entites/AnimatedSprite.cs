@@ -22,7 +22,7 @@ public partial class AnimatedSprite : Sprite
         Collider_Active = false;
         
 
-        if (update != null)
+        if (update != null && _updateWrapper == null)
         {
             _updateWrapper = (baseEntity, dt) => update((AnimatedSprite)baseEntity, dt);
             Update = _updateWrapper;

@@ -7,7 +7,6 @@ public record struct RenderItem(int RenderOrder) : IComponent;
 public record struct SpriteRenderer : IComponent
 {
     public Vector2 Pivot { get; set; }
-    public float Rotation { get; set; }
     Texture texture;
     public Texture Texture => texture;
     private Rect rect;
@@ -34,6 +33,6 @@ public record struct SpriteRenderer : IComponent
 
 
 
-public record struct ShapeRenderer(Color Color, float Width, float Height, float Rotation, Vector2 Pivot) : IComponent;
+public record struct ShapeRenderer(Color Color, float Width, float Height, Vector2 Pivot) : IComponent;
 //TODO: make this actually work
 public record struct TextRenderer(Color Color, string text,float Width, float Height) : IComponent;

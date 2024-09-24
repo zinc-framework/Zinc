@@ -15,7 +15,7 @@ public partial class ParticleEmitter : SceneEntity
         RenderOrder = Scene.GetNextSceneRenderCounter();
         ECSEntity.Set(new ParticleEmitterComponent(config));
 
-        if (update != null)
+        if (update != null && _updateWrapper == null)
         {
             _updateWrapper = (baseEntity, dt) => update((ParticleEmitter)baseEntity, dt);
             Update = _updateWrapper;

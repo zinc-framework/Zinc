@@ -17,11 +17,12 @@ public partial class Sprite : SceneEntity
         RenderOrder = Scene.GetNextSceneRenderCounter();
         ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Rect));
         Renderer_Pivot = new System.Numerics.Vector2(0.5f);
+        Collider_Pivot = new System.Numerics.Vector2(0.5f);
         Collider_Width = Data.Rect.width;
         Collider_Height = Data.Rect.height;
         Collider_Active = false;
 
-        if (update != null)
+        if (update != null  && _updateWrapper == null)
         {
             _updateWrapper = (baseEntity, dt) => update((Sprite)baseEntity, dt);
             Update = _updateWrapper;

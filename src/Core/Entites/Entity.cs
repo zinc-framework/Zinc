@@ -40,7 +40,7 @@ public partial class Entity
 public partial class Anchor : Entity
 {
     public Scene Scene => Engine.SceneLookup[SceneID];
-    public Anchor? Parent {get; private set; }= null;
+    public Anchor? Parent {get; private set; } = null;
     private List<Anchor> children = new();
     public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled)
@@ -53,9 +53,9 @@ public partial class Anchor : Entity
             //we add ourselves to either the passed in parent or the root of the scene we are in
             //only scene root anchors get a null parent
             targetParent = parent != null ? parent : Engine.SceneLookup[SceneID];
-            targetParent!.children.Add(this);
+            targetParent.children.Add(this);
         }
-        this.Parent = targetParent!;
+        this.Parent = targetParent;
 
         if(children != null)
         {
@@ -68,7 +68,7 @@ public partial class Anchor : Entity
 
     public void SetParent(Anchor parent)
     {
-        this.Parent.children.Remove(this);
+        Parent.children.Remove(this);
         parent.children.Add(this);
     }
 
@@ -81,28 +81,34 @@ public partial class Anchor : Entity
 
     protected override void OnDestroy()
     {
-        foreach (var c in children)
+        var currentChildren = new List<Anchor>(children);
+        foreach (var c in currentChildren)
         {
             c.Destroy();
+        }
+        if(Parent != null)
+        {
+            Parent.children.Remove(this);
         }
         Engine.SceneEntityMap[SceneID].Remove(ID);
     }
 
     private Position LocalPosition => ECSEntity.Get<Position>();
     // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
-    private Matrix3x2 GetWorldTransform(Position? offset = null)
+    public Matrix3x2 GetWorldTransform(Position? offset = null)
     {
-        Matrix3x2 worldTransform = (Matrix3x2)LocalPosition;
-        if(offset.HasValue)
+        Matrix3x2 worldTransform = Matrix3x2.Identity;
+        if (offset.HasValue)
         {
-            worldTransform = worldTransform * (Matrix3x2)offset.Value; 
+            worldTransform = (Matrix3x2)offset.Value;
         }
+
         var currentAnchor = this;
-        
-        while (currentAnchor.Parent != null)
+
+        while (currentAnchor != null)
         {
+            worldTransform = (Matrix3x2)currentAnchor.LocalPosition * worldTransform;
             currentAnchor = currentAnchor.Parent;
-            worldTransform = worldTransform * currentAnchor.LocalPosition;
         }
 
         return worldTransform;

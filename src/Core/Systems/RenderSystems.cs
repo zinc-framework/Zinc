@@ -56,7 +56,7 @@ public class SceneRenderSystem : RenderSystem
             Zinc.Entity renderEntity;
             foreach (var item in sceneOrderedEntities.OrderByDescending(x => x.renderItem.RenderOrder))
             {
-                renderEntity = Engine.EntityLookup[item.managedID];
+                renderEntity =  Engine.GetEntity(item.managedID);
                 if (renderEntity.ECSEntity.Has<SpriteRenderer>())
                 {
                     ref var r = ref renderEntity.ECSEntity.Get<SpriteRenderer>();
@@ -71,7 +71,9 @@ public class SceneRenderSystem : RenderSystem
                 {
                     ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
                     var anchor = renderEntity as Anchor;
-                    Engine.DrawShape(anchor.GetWorldPosition(), r);
+
+                    var p = anchor.GetWorldPosition();
+                    Engine.DrawShape(p, r);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())

@@ -13,25 +13,34 @@ namespace Zinc;
 public class DebugOverlaySystem : DSystem, IUpdateSystem
 {
     QueryDescription colliderDebug = new QueryDescription().WithAll<ActiveState,Collider,Position,EntityID,AdditionalEntityInfo>();
+    float colliderTick = 0.1f;
+    float acc = 0f;
     public void Update(double dt)
     {
+        acc += (float)dt;
         Engine.ECSWorld.Query(in colliderDebug,
             (Arch.Core.Entity e, ref Position p, ref ActiveState a, ref Collider c, ref EntityID o, ref AdditionalEntityInfo info) =>
             {
                 if(!a.Active){return;}
-                if(e.Id == Engine.Cursor.ECSEntity.Id){return;}
+                var activeEntity = Engine.GetEntity(o.ID);
+                if(activeEntity == Engine.Cursor){return;}
                 var bounds = Utils.GetBounds(o.ID,c);
                 float minX = Single.MaxValue, minY = Single.MaxValue, maxX = 0, maxY = 0;
-                foreach (var b in bounds)
+
+                if(acc > colliderTick)
                 {
-                    minX = b.X < minX ? b.X : minX;
-                    minY = b.Y < minY ? b.Y : minY;
-                    
-                    maxX = b.X > maxX ? b.X : maxX;
-                    maxY = b.Y > maxY ? b.Y : maxY;
+                    foreach (var b in bounds)
+                    {
+                        new TemporaryShape(colliderTick,4,4,Palettes.ENDESGA[8]){X = b.X,Y = b.Y, RenderOrder = -1};
+                        // minX = b.X < minX ? b.X : minX;
+                        // minY = b.Y < minY ? b.Y : minY;
+                        
+                        // maxX = b.X > maxX ? b.X : maxX;
+                        // maxY = b.Y > maxY ? b.Y : maxY;
+                    }
                 }
 
-                if(Engine.EntityLookup[o.ID] is Anchor anchor)
+                if(Engine.GetEntity(o.ID) is Anchor anchor)
                 {
                     //cute scaling but kind of bad without state
                     // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
@@ -56,5 +65,10 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
 
                 }
             });
+
+            if(acc > colliderTick)
+            {
+                acc = 0;
+            }
     }
 }
