@@ -4,8 +4,7 @@ using Zinc.Core;
 using Zinc.Internal.Cute;
 using Zinc.Internal.Sokol;
 using Zinc.Internal.STB;
-using Volatile;
-
+ 
 namespace Zinc;
 
 [Component<EntityID>]
@@ -97,15 +96,40 @@ public partial class Anchor : Entity
     // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
     public Matrix4x4 GetWorldTransform()
     {
+        Matrix4x4 localMatrix = Matrix4x4.CreateScale(LocalPosition.ScaleX, LocalPosition.ScaleY, 1) *
+                                Matrix4x4.CreateRotationZ(LocalPosition.Rotation) *
+                                Matrix4x4.CreateTranslation(LocalPosition.X, LocalPosition.Y, 0);
+
         if (Parent != null)
         {
-            return LocalPosition * Parent.GetWorldTransform();
+            Matrix4x4 parentMatrix = Parent.GetWorldTransform();
+            Matrix4x4 combinedMatrix = localMatrix * parentMatrix;
+
+            // Decompose and recompose to eliminate skew
+            DecomposedMatrix decomposed = combinedMatrix.Decompose();
+            return Matrix4x4Extensions.RecomposeWithoutSkew(decomposed);
         }
 
-        return LocalPosition;
+        return localMatrix;
     }
 
-    public Position GetWorldPosition(Position? offset = null) => GetWorldTransform().ToWorldPosition();
+    public Position GetWorldPosition(Position? offset = null)
+    {
+        if(Parent == null)
+        {
+            return LocalPosition;
+        }
+        Matrix4x4 parentMatrix = Parent.GetWorldPosition();
+        Matrix4x4 localMatrix = LocalPosition;
+        Matrix4x4 worldMatrix = localMatrix * parentMatrix;
+        return Position.FromMatrix(worldMatrix);
+    }
+
+    public Vector2 TransformPoint(Vector2 point)
+    {
+        Matrix4x4 worldMatrix = GetWorldPosition();
+        return Vector2.Transform(point, worldMatrix);
+    }
 }
 
 

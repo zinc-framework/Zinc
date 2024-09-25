@@ -132,21 +132,31 @@ public static class Utils
     public static Vector2[] GetBounds(int entityID, Collider c)
     {
         if (Engine.GetEntity(entityID) is Anchor anchor)
+    {
+        Vector2[] localCorners = new Vector2[]
         {
-            Vector2[] localCorners = new Vector2[]
-            {
-                new Vector2(-c.Width * c.Pivot.X, -c.Height * c.Pivot.Y),
-                new Vector2(c.Width * (1 - c.Pivot.X), -c.Height * c.Pivot.Y),
-                new Vector2(c.Width * (1 - c.Pivot.X), c.Height * (1 - c.Pivot.Y)),
-                new Vector2(-c.Width * c.Pivot.X, c.Height * (1 - c.Pivot.Y))
-            };
+            new Vector2(-c.Width * c.Pivot.X, -c.Height * c.Pivot.Y),
+            new Vector2(c.Width * (1 - c.Pivot.X), -c.Height * c.Pivot.Y),
+            new Vector2(c.Width * (1 - c.Pivot.X), c.Height * (1 - c.Pivot.Y)),
+            new Vector2(-c.Width * c.Pivot.X, c.Height * (1 - c.Pivot.Y))
+        };
 
-            return localCorners.Select(corner => Vector2.Transform(corner, anchor.GetWorldPosition())).ToArray();
-        }
+        // Assuming Anchor now has a TransformNode property
+        return localCorners.Select(anchor.TransformPoint).ToArray();
+    }
 
         // Fallback for non-Anchor entities
-        var pos = (Vector2)Engine.GetEntity(entityID).ECSEntity.Get<Position>();
-        return Enumerable.Repeat(pos, 4).ToArray();
+        // var pos = (Vector2)Engine.GetEntity(entityID).ECSEntity.Get<Position>();
+        // return Enumerable.Repeat(pos, 4).ToArray();
+
+        var pos = Engine.GetEntity(entityID).ECSEntity.Get<Position>();
+        return new Vector2[]
+        {
+            new Vector2(pos.X, pos.Y),
+            new Vector2(pos.X + c.Width, pos.Y),
+            new Vector2(pos.X + c.Width, pos.Y + c.Height),
+            new Vector2(pos.X, pos.Y + c.Height)
+        };
     }
 
 }

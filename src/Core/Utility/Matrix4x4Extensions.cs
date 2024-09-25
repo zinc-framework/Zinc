@@ -10,51 +10,41 @@ public struct DecomposedMatrix
 }
 public static class Matrix4x4Extensions
 {
-    public static Position ToWorldPosition(this Matrix4x4 matrix)
+    public static DecomposedMatrix Decompose(this Matrix4x4 matrix)
     {
-        var (scale, rotation, translation) = DecomposeMatrix(matrix);
-        
-        return new Position(
-            translation.X,
-            translation.Y,
-            scale.X,
-            scale.Y,
-            QuaternionToEuler(rotation).Z
+        DecomposedMatrix result = new DecomposedMatrix();
+
+        // Extract translation
+        result.Translation = new Vector3(matrix.M41, matrix.M42, matrix.M43);
+
+        // Extract scale
+        result.Scale = new Vector3(
+            new Vector3(matrix.M11, matrix.M12, matrix.M13).Length(),
+            new Vector3(matrix.M21, matrix.M22, matrix.M23).Length(),
+            new Vector3(matrix.M31, matrix.M32, matrix.M33).Length()
         );
 
-        (Vector3 scale, Quaternion rotation, Vector3 translation) DecomposeMatrix(Matrix4x4 matrix)
-        {
-            Vector3 scale;
-            Quaternion rotation;
-            Vector3 translation;
-            
-            Matrix4x4.Decompose(matrix, out scale, out rotation, out translation);
-            
-            return (scale, rotation, translation);
-        }
+        // Extract rotation
+        Matrix4x4 rotationMatrix = new Matrix4x4(
+            matrix.M11 / result.Scale.X, matrix.M12 / result.Scale.X, matrix.M13 / result.Scale.X, 0,
+            matrix.M21 / result.Scale.Y, matrix.M22 / result.Scale.Y, matrix.M23 / result.Scale.Y, 0,
+            matrix.M31 / result.Scale.Z, matrix.M32 / result.Scale.Z, matrix.M33 / result.Scale.Z, 0,
+            0, 0, 0, 1
+        );
+        result.Rotation = Quaternion.CreateFromRotationMatrix(rotationMatrix);
 
-        Vector3 QuaternionToEuler(Quaternion q)
-        {
-            Vector3 angles;
+        return result;
+    }
 
-            // roll (x-axis rotation)
-            double sinr_cosp = 2 * (q.W * q.X + q.Y * q.Z);
-            double cosr_cosp = 1 - 2 * (q.X * q.X + q.Y * q.Y);
-            angles.X = (float)Math.Atan2(sinr_cosp, cosr_cosp);
+    public static Matrix4x4 RecomposeWithoutSkew(DecomposedMatrix decomposed)
+    {
+        return Matrix4x4.CreateScale(decomposed.Scale) *
+               Matrix4x4.CreateFromQuaternion(decomposed.Rotation) *
+               Matrix4x4.CreateTranslation(decomposed.Translation);
+    }
 
-            // pitch (y-axis rotation)
-            double sinp = 2 * (q.W * q.Y - q.Z * q.X);
-            if (Math.Abs(sinp) >= 1)
-                angles.Y = (float)Math.CopySign(Math.PI / 2, sinp); // use 90 degrees if out of range
-            else
-                angles.Y = (float)Math.Asin(sinp);
-
-            // yaw (z-axis rotation)
-            double siny_cosp = 2 * (q.W * q.Z + q.X * q.Y);
-            double cosy_cosp = 1 - 2 * (q.Y * q.Y + q.Z * q.Z);
-            angles.Z = (float)Math.Atan2(siny_cosp, cosy_cosp);
-
-            return angles;
-        }
+    public static Position ToWorldPosition(this Matrix4x4 matrix)
+    {
+        return Position.FromMatrix(matrix);
     }
 }
