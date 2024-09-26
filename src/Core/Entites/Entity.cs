@@ -4,7 +4,6 @@ using Zinc.Core;
 using Zinc.Internal.Cute;
 using Zinc.Internal.Sokol;
 using Zinc.Internal.STB;
-using Volatile;
 
 namespace Zinc;
 
@@ -94,18 +93,21 @@ public partial class Anchor : Entity
     }
 
     public Position LocalPosition => ECSEntity.Get<Position>();
-    // private Matrix3x2 LocalTransform => LocalPosition; //implicit conversion to matrix
-    public Matrix4x4 GetWorldTransform()
+    public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
     {
+        var (localTransform, localScale) = LocalPosition.GetLocalTransform();
+
         if (Parent != null)
         {
-            return LocalPosition * Parent.GetWorldTransform();
+            var (parentTransform, parentScale) = Parent.GetWorldTransform();
+            
+            // Combine transforms and scales correctly
+            return (localTransform * parentTransform, 
+                    new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y));
         }
 
-        return LocalPosition;
+        return (localTransform, localScale);
     }
-
-    public Position GetWorldPosition(Position? offset = null) => GetWorldTransform().ToWorldPosition();
 }
 
 

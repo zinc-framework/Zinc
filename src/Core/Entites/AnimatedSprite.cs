@@ -12,11 +12,11 @@ public partial class AnimatedSprite : Sprite
      : base(animatedSpriteData,scene,startEnabled,parent:parent,children:children)
     {
         Data = animatedSpriteData;
-        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         RenderOrder = Scene.GetNextSceneRenderCounter();
         Animations = Data.Animations;
         var firstFrame = Animations.First().Frames[0];
         ECSEntity.Set(new SpriteRenderer(Data.Texture, firstFrame));
+        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         Collider_Width = firstFrame.width;
         Collider_Height = firstFrame.height;
         Collider_Active = false;

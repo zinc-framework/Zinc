@@ -129,24 +129,34 @@ public static class Utils
         return new Polygon(4,GetBounds(entityID,c));
     }
     
-    public static Vector2[] GetBounds(int entityID, Collider c)
+     public static Vector2[] GetBounds(int entityID, Collider c)
     {
-        if (Engine.GetEntity(entityID) is Anchor anchor)
+        if (Engine.GetEntity(entityID) is Anchor entity)
         {
+            var (worldTransform, worldScale) = entity.GetWorldTransform();
+            Vector2 pivot = new Vector2(c.Pivot.X * c.Width, c.Pivot.Y * c.Height);
+
             Vector2[] localCorners = new Vector2[]
             {
-                new Vector2(-c.Width * c.Pivot.X, -c.Height * c.Pivot.Y),
-                new Vector2(c.Width * (1 - c.Pivot.X), -c.Height * c.Pivot.Y),
-                new Vector2(c.Width * (1 - c.Pivot.X), c.Height * (1 - c.Pivot.Y)),
-                new Vector2(-c.Width * c.Pivot.X, c.Height * (1 - c.Pivot.Y))
+                new Vector2(-pivot.X, -pivot.Y),
+                new Vector2(c.Width - pivot.X, -pivot.Y),
+                new Vector2(c.Width - pivot.X, c.Height - pivot.Y),
+                new Vector2(-pivot.X, c.Height - pivot.Y)
             };
 
-            return localCorners.Select(corner => Vector2.Transform(corner, anchor.GetWorldPosition())).ToArray();
+            return localCorners.Select(corner =>
+            {
+                // Apply scale
+                Vector2 scaledCorner = new Vector2(corner.X * worldScale.X, corner.Y * worldScale.Y);
+                // Apply world transform
+                return Vector2.Transform(scaledCorner, worldTransform);
+            }).ToArray();
         }
 
-        // Fallback for non-Anchor entities
+        // Fallback for entities without transform
         var pos = (Vector2)Engine.GetEntity(entityID).ECSEntity.Get<Position>();
         return Enumerable.Repeat(pos, 4).ToArray();
+
     }
 
 }

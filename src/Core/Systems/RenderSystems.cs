@@ -64,20 +64,18 @@ public class SceneRenderSystem : RenderSystem
                     {
                         r.Texture.Load();
                     }
-                    Engine.DrawTexturedRect((renderEntity as Anchor).GetWorldPosition(),r);
+                    Engine.DrawTexturedRect(renderEntity as Anchor,r);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ShapeRenderer>())
                 {
                     ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
-                    var anchor = renderEntity as Anchor;
-
-                    Engine.DrawShape(anchor.GetWorldPosition(), anchor.LocalPosition, r);
+                    Engine.DrawShape(renderEntity as Anchor, r);
                 }
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
-                    var p = (renderEntity as Anchor).GetWorldPosition();
+                    (renderEntity as Anchor).GetWorldTransform().transform.Decompose(out var p, out var rot, out var scale);
                     ref var emitter = ref renderEntity.ECSEntity.Get<ParticleEmitterComponent>();
                      // Update the particles
                     List<int> activeIndices = new List<int>();
@@ -152,7 +150,7 @@ public class SceneRenderSystem : RenderSystem
                     // Draw the particles
                     if (activeIndices.Count > 0)
                     {
-                        Engine.DrawParticles(p, emitter, activeIndices);
+                        Engine.DrawParticles(emitter, activeIndices);
                     }
                 }
             }

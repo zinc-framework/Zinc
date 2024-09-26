@@ -10,51 +10,26 @@ public struct DecomposedMatrix
 }
 public static class Matrix4x4Extensions
 {
-    public static Position ToWorldPosition(this Matrix4x4 matrix)
+    public static void Decompose(this Matrix3x2 matrix, out Vector2 translation, out float rotation, out Vector2 scale)
     {
-        var (scale, rotation, translation) = DecomposeMatrix(matrix);
-        
-        return new Position(
-            translation.X,
-            translation.Y,
-            scale.X,
-            scale.Y,
-            QuaternionToEuler(rotation).Z
+        //note System.Numercis.Matrix3x2 is a row major matrix
+
+        // Extract translation
+        translation = new Vector2(matrix.M31, matrix.M32);
+
+        // Extract scale
+        scale = new Vector2(
+            (float)Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12),
+            (float)Math.Sqrt(matrix.M21 * matrix.M21 + matrix.M22 * matrix.M22)
         );
 
-        (Vector3 scale, Quaternion rotation, Vector3 translation) DecomposeMatrix(Matrix4x4 matrix)
+        // Extract rotation
+        rotation = (float)Math.Atan2(matrix.M12, matrix.M11);
+
+        // Ensure correct rotation sign and scale direction
+        if (matrix.M11 * matrix.M22 - matrix.M12 * matrix.M21 < 0)
         {
-            Vector3 scale;
-            Quaternion rotation;
-            Vector3 translation;
-            
-            Matrix4x4.Decompose(matrix, out scale, out rotation, out translation);
-            
-            return (scale, rotation, translation);
-        }
-
-        Vector3 QuaternionToEuler(Quaternion q)
-        {
-            Vector3 angles;
-
-            // roll (x-axis rotation)
-            double sinr_cosp = 2 * (q.W * q.X + q.Y * q.Z);
-            double cosr_cosp = 1 - 2 * (q.X * q.X + q.Y * q.Y);
-            angles.X = (float)Math.Atan2(sinr_cosp, cosr_cosp);
-
-            // pitch (y-axis rotation)
-            double sinp = 2 * (q.W * q.Y - q.Z * q.X);
-            if (Math.Abs(sinp) >= 1)
-                angles.Y = (float)Math.CopySign(Math.PI / 2, sinp); // use 90 degrees if out of range
-            else
-                angles.Y = (float)Math.Asin(sinp);
-
-            // yaw (z-axis rotation)
-            double siny_cosp = 2 * (q.W * q.Z + q.X * q.Y);
-            double cosy_cosp = 1 - 2 * (q.Y * q.Y + q.Z * q.Z);
-            angles.Z = (float)Math.Atan2(siny_cosp, cosy_cosp);
-
-            return angles;
+            scale.Y = -scale.Y;
         }
     }
 }

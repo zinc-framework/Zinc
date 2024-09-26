@@ -6,12 +6,27 @@ public interface IComponent {}
 
 public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float ScaleY = 1, float Rotation = 0f) : IComponent
 {
-    public static implicit operator Matrix4x4(Position p)
+    public static implicit operator Matrix3x2(Position p)
     {
-        // float normalizedRotation = p.Rotation % (2 * MathF.PI);
-        return Matrix4x4.CreateScale(p.ScaleX, p.ScaleY, 1) *
-               Matrix4x4.CreateRotationZ(p.Rotation) *
-               Matrix4x4.CreateTranslation(p.X, p.Y, 0);
+        float normalizedRotation = p.Rotation % (2 * MathF.PI);
+        var trans = Matrix3x2.CreateTranslation(p.X, p.Y);
+        var rot = Matrix3x2.CreateRotation(normalizedRotation);
+        var scale = Matrix3x2.CreateScale(p.ScaleX, p.ScaleY);
+        //3x2 is row major (not column major)
+        //so we mult right to left
+        return  scale * rot * trans; //working
+    }
+
+    public (Matrix3x2 transform, Vector2 scale) GetLocalTransform()
+    {
+        float normalizedRotation = Rotation % (2 * MathF.PI);
+        
+        var translate = Matrix3x2.CreateTranslation(X, Y);
+        var rotate = Matrix3x2.CreateRotation(normalizedRotation);
+        var scale = new Vector2(ScaleX, ScaleY);
+
+        // Combine rotation and translation, keep scale separate
+        return (rotate * translate, scale);
     }
     
     public static implicit operator Vector2(Position p) =>

@@ -610,24 +610,26 @@ public static partial class Engine
         }
     }
 
-    public static void DrawTexturedRect(Position p, SpriteRenderer r)
+    public static void DrawTexturedRect(Anchor a, SpriteRenderer r)
     {
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
-        GP.translate(p.X,p.Y);
-        GP.rotate_at(-p.Rotation,0,0);
-        GP.scale_at(p.ScaleX, p.ScaleY, 0,0);
-        GP.push_transform();
-        GP.translate(-r.Pivot.X * r.Width,-r.Pivot.Y * r.Height);
+        float pivotX = r.Pivot.X * r.Width;
+        float pivotY = r.Pivot.Y * r.Height;
+        GP.translate(world_pos.X, world_pos.Y);
+        GP.translate(-pivotX, -pivotY);
+        GP.rotate_at(world_rotation,pivotX,pivotY);
+        GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
             r.SizeRect.InternalRect,
             //this is the rect index into the texture itself
             r.Rect.InternalRect);
-        GP.pop_transform();
         GP.pop_transform();
         // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
         GP.reset_image(0);
@@ -654,24 +656,59 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawShape(Position worldPos, Position localPos, ShapeRenderer r)
+    public static void DrawShape(Anchor a, ShapeRenderer r)
     {
         //argb
         //rgba
         GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
-        GP.translate(worldPos.X, worldPos.Y);
-        GP.rotate(worldPos.Rotation);
-        GP.scale(worldPos.ScaleX, worldPos.ScaleY);
-        // GP.rotate(localPos.Rotation);
-        GP.translate(-r.Pivot.X * r.Width, -r.Pivot.Y * r.Height);
+        float pivotX = r.Pivot.X * r.Width;
+        float pivotY = r.Pivot.Y * r.Height;
+        GP.translate(world_pos.X, world_pos.Y);
+        GP.translate(-pivotX, -pivotY);
+        GP.rotate_at(world_rotation,pivotX,pivotY);
+        GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();
         GP.reset_color();
     }
+
+    // public static void DrawShape(Anchor anchor, ShapeRenderer renderer)
+    // {
+    //     GP.set_color(renderer.Color.internal_color.r, renderer.Color.internal_color.g, renderer.Color.internal_color.b, renderer.Color.internal_color.a);
+    //     GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
+
+    //     Matrix4x4 transform = anchor.GetWorldTransform();
+    //     Vector3 pivotOffset = new Vector3(-renderer.Pivot.X * renderer.Width, -renderer.Pivot.Y * renderer.Height, 0);
+        
+    //     transform = Matrix4x4.CreateTranslation(pivotOffset) *
+    //                 transform *
+    //                 Matrix4x4.CreateTranslation(-pivotOffset);
+    //     var p = anchor.GetWorldTransformWithPivot(new Vector2(renderer.Pivot.X * renderer.Width, renderer.Pivot.Y * renderer.Height)).ToWorldPosition();
+    //     // Matrix4x4 transform = anchor.GetWorldTransformWithPivot(new Vector2(renderer.Pivot.X * renderer.Width, renderer.Pivot.Y * renderer.Height));
+    //     // Vector3 position = transform.Translation;
+    //     // Vector3 scale = new Vector3(
+    //     //     MathF.Sqrt(transform.M11 * transform.M11 + transform.M21 * transform.M21),
+    //     //     MathF.Sqrt(transform.M12 * transform.M12 + transform.M22 * transform.M22),
+    //     //     1
+    //     // );
+    //     // float rotation = MathF.Atan2(transform.M21, transform.M11);
+
+    //     GP.push_transform();
+    //     GP.translate(-renderer.Pivot.X * renderer.Width, -renderer.Pivot.Y * renderer.Height);
+    //     GP.scale(p.ScaleX, p.ScaleY);
+    //     GP.rotate(p.Rotation);
+    //     GP.translate(p.X, p.Y);
+    //     GP.draw_filled_rect(0,0, renderer.Width, renderer.Height);
+    //     GP.pop_transform();
+        
+    //     GP.reset_color();
+    // }
     
-    public static void DrawParticles(Position p, ParticleEmitterComponent c, List<int> activeIndicies)
+    public static void DrawParticles(ParticleEmitterComponent c, List<int> activeIndicies)
     {
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         switch (c.Config.ParticleConfig.ParticleType)

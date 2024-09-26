@@ -45,7 +45,7 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                     //cute scaling but kind of bad without state
                     // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
                     // ImGUIHelper.Wrappers.SetNextWindowSize(maxX-minX, maxY-minY);
-                    var winPos = anchor.GetWorldPosition();
+                    anchor.GetWorldTransform().transform.Decompose(out var winPos, out var rot, out var scale);
                     ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(winPos.X,winPos.Y));
                     ImGUIHelper.Wrappers.SetNextWindowSize(100,100);
                     ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
