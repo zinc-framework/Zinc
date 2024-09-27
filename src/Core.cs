@@ -667,46 +667,14 @@ public static partial class Engine
         GP.push_transform();
         float pivotX = r.Pivot.X * r.Width;
         float pivotY = r.Pivot.Y * r.Height;
-        GP.translate(world_pos.X, world_pos.Y);
         GP.translate(-pivotX, -pivotY);
+        GP.translate(world_pos.X, world_pos.Y);
         GP.rotate_at(world_rotation,pivotX,pivotY);
         GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();
         GP.reset_color();
     }
-
-    // public static void DrawShape(Anchor anchor, ShapeRenderer renderer)
-    // {
-    //     GP.set_color(renderer.Color.internal_color.r, renderer.Color.internal_color.g, renderer.Color.internal_color.b, renderer.Color.internal_color.a);
-    //     GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
-
-    //     Matrix4x4 transform = anchor.GetWorldTransform();
-    //     Vector3 pivotOffset = new Vector3(-renderer.Pivot.X * renderer.Width, -renderer.Pivot.Y * renderer.Height, 0);
-        
-    //     transform = Matrix4x4.CreateTranslation(pivotOffset) *
-    //                 transform *
-    //                 Matrix4x4.CreateTranslation(-pivotOffset);
-    //     var p = anchor.GetWorldTransformWithPivot(new Vector2(renderer.Pivot.X * renderer.Width, renderer.Pivot.Y * renderer.Height)).ToWorldPosition();
-    //     // Matrix4x4 transform = anchor.GetWorldTransformWithPivot(new Vector2(renderer.Pivot.X * renderer.Width, renderer.Pivot.Y * renderer.Height));
-    //     // Vector3 position = transform.Translation;
-    //     // Vector3 scale = new Vector3(
-    //     //     MathF.Sqrt(transform.M11 * transform.M11 + transform.M21 * transform.M21),
-    //     //     MathF.Sqrt(transform.M12 * transform.M12 + transform.M22 * transform.M22),
-    //     //     1
-    //     // );
-    //     // float rotation = MathF.Atan2(transform.M21, transform.M11);
-
-    //     GP.push_transform();
-    //     GP.translate(-renderer.Pivot.X * renderer.Width, -renderer.Pivot.Y * renderer.Height);
-    //     GP.scale(p.ScaleX, p.ScaleY);
-    //     GP.rotate(p.Rotation);
-    //     GP.translate(p.X, p.Y);
-    //     GP.draw_filled_rect(0,0, renderer.Width, renderer.Height);
-    //     GP.pop_transform();
-        
-    //     GP.reset_color();
-    // }
     
     public static void DrawParticles(ParticleEmitterComponent c, List<int> activeIndicies)
     {

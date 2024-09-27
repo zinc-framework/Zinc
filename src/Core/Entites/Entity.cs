@@ -93,20 +93,60 @@ public partial class Anchor : Entity
     }
 
     public Position LocalPosition => ECSEntity.Get<Position>();
+    // original working with transforms not scaled
+    // public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
+    // {
+    //     var (localTransform, localScale) = LocalPosition.GetLocalTransform();
+
+    //     if (Parent != null)
+    //     {
+    //         var (parentTransform, parentScale) = Parent.GetWorldTransform();
+            
+    //         // Combine transforms and scales correctly
+    //         return (localTransform * parentTransform, 
+    //                 new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y));
+    //     }
+
+    //     return (localTransform, localScale);
+    // }
+
+    //working except for parent rotate due to scenerootachor
     public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
     {
-        var (localTransform, localScale) = LocalPosition.GetLocalTransform();
+        var (localRotation, localTranslation, localScale) = LocalPosition.GetLocalTransform();
 
-        if (Parent != null)
+        if (Parent != null && !(Parent is Scene.SceneRootAnchor))
         {
             var (parentTransform, parentScale) = Parent.GetWorldTransform();
             
-            // Combine transforms and scales correctly
-            return (localTransform * parentTransform, 
-                    new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y));
+            // Scale the local translation
+            Vector2 scaledTranslation = new Vector2(
+                localTranslation.X * parentScale.X,
+                localTranslation.Y * parentScale.Y
+            );
+
+            // Create a matrix for the scaled translation
+            Matrix3x2 scaledTranslationMatrix = Matrix3x2.CreateTranslation(scaledTranslation);
+
+            // Combine transforms: (ScaledTranslation * LocalRotation) * ParentTransform
+            Matrix3x2 worldTransform = (scaledTranslationMatrix * localRotation) * parentTransform;
+            
+            // Accumulate scale
+            Vector2 worldScale = new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y);
+
+            return (worldTransform, worldScale);
         }
 
+        // If no parent, just combine local translation and rotation
+        Matrix3x2 localTransform = localRotation * Matrix3x2.CreateTranslation(localTranslation);
         return (localTransform, localScale);
+    }
+
+    public Vector2 GetWorldPosition()
+    {
+        GetWorldTransform().transform.Decompose(out var translation, out var rotation, out var scale);
+        // var (transform, scale) = GetWorldTransform().transform.Decompose();
+        return translation;
     }
 }
 

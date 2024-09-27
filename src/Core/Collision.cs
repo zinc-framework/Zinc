@@ -129,7 +129,7 @@ public static class Utils
         return new Polygon(4,GetBounds(entityID,c));
     }
     
-     public static Vector2[] GetBounds(int entityID, Collider c)
+    public static Vector2[] GetBounds(int entityID, Collider c)
     {
         if (Engine.GetEntity(entityID) is Anchor entity)
         {
@@ -156,9 +156,7 @@ public static class Utils
         // Fallback for entities without transform
         var pos = (Vector2)Engine.GetEntity(entityID).ECSEntity.Get<Position>();
         return Enumerable.Repeat(pos, 4).ToArray();
-
     }
-
 }
 
 

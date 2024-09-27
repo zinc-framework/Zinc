@@ -17,16 +17,27 @@ public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float 
         return  scale * rot * trans; //working
     }
 
-    public (Matrix3x2 transform, Vector2 scale) GetLocalTransform()
+    // public (Matrix3x2 transform, Vector2 scale) GetLocalTransform()
+    // {
+    //     float normalizedRotation = Rotation % (2 * MathF.PI);
+        
+    //     var translate = Matrix3x2.CreateTranslation(X, Y);
+    //     var rotate = Matrix3x2.CreateRotation(normalizedRotation);
+    //     var scale = new Vector2(ScaleX, ScaleY);
+
+    //     // Combine rotation and translation, keep scale separate
+    //     return (rotate * translate, scale);
+    // }
+
+    public (Matrix3x2 rotation, Vector2 translation, Vector2 scale) GetLocalTransform()
     {
         float normalizedRotation = Rotation % (2 * MathF.PI);
         
-        var translate = Matrix3x2.CreateTranslation(X, Y);
-        var rotate = Matrix3x2.CreateRotation(normalizedRotation);
+        var rotation = Matrix3x2.CreateRotation(normalizedRotation);
+        var translation = new Vector2(X, Y);
         var scale = new Vector2(ScaleX, ScaleY);
 
-        // Combine rotation and translation, keep scale separate
-        return (rotate * translate, scale);
+        return (rotation, translation, scale);
     }
     
     public static implicit operator Vector2(Position p) =>
