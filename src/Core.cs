@@ -42,6 +42,7 @@ public static partial class Engine
         new FrameAnimationSystem(),
         //update
         InputSystem,
+        new GridSystem(),
         new SceneUpdateSystem(),
         new TemporaryObjectSystem(),
         new CoroutineSystem(),

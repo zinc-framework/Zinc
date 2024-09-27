@@ -1,5 +1,6 @@
 using System.Numerics;
 using Arch.Core.Extensions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Zinc.Core;
 using Zinc.Internal.Cute;
 using Zinc.Internal.Sokol;
@@ -63,6 +64,15 @@ public partial class Anchor : Entity
                 AddChild(c);
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the children of this anchor. 
+    /// </summary>
+    /// <returns>A copy of the list of children</returns>
+    public List<Anchor> GetChildren()
+    {
+        return new List<Anchor>(children);
     }
 
     public void SetParent(Anchor parent)
