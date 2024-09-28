@@ -72,19 +72,20 @@ public partial class Anchor : Entity
     /// <returns>A copy of the list of children</returns>
     public List<Anchor> GetChildren()
     {
-        return new List<Anchor>(children);
+        return children;
     }
 
-    public void SetParent(Anchor parent)
+    public void SetParent(Anchor newParent)
     {
         Parent.children.Remove(this);
-        parent.children.Add(this);
+        //TODO: figure out how to handle transfoms when changing parents
+        newParent.children.Add(this);
+        Parent = newParent;
     }
 
     public Anchor AddChild(Anchor child)
     {
         child.SetParent(this);
-        children.Add(child);
         return child;
     }
 

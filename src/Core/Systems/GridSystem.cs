@@ -19,8 +19,6 @@ public class GridSystem : DSystem, IPreUpdateSystem
             if(!a.Active){return;}
             var grid = Engine.GetEntity(managedID.ID) as Grid;
             var children = grid.GetChildren();
-            // var startX = grid.X - gc.GridWidth * gc.GridPivot.X;
-            // var startY = grid.Y - gc.GridHeight * gc.GridPivot.Y;
             var startX = - gc.GridWidth * gc.GridPivot.X;
             var startY = - gc.GridHeight * gc.GridPivot.Y;
             Console.WriteLine("Grid width: " + gc.GridWidth + " Grid height: " + gc.GridHeight);

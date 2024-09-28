@@ -12,9 +12,8 @@ public partial class Grid : SceneEntity
         Name = "Grid";
         CellWidth = cellWidth;
         CellHeight = cellHeight;
-        // GridPivot = new Vector2(0.5f);
         GridPivot = new Vector2(0.5f);
-        CellPivot = Vector2.Zero;
+        CellPivot = new Vector2(0.5f);
         if (update != null && _updateWrapper == null)
         {
             _updateWrapper = (baseEntity, dt) => update((Grid)baseEntity, dt);
