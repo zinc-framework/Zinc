@@ -46,6 +46,11 @@ public static class ImGUIHelper
             var p = Internal.Sokol.ImGUI.igGetWindowDrawList();
             Internal.Sokol.ImGUI.ImDrawList_AddQuadFilled(Internal.Sokol.ImGUI.igGetWindowDrawList(),a.ToImVec2(),b.ToImVec2(),c.ToImVec2(),d.ToImVec2(),Palettes.ONE_BIT_MONITOR_GLOW[1]);
         }
+        public static unsafe void DrawCircle(Vector2 center, float radius)
+        {
+            var p = Internal.Sokol.ImGUI.igGetWindowDrawList();
+            Internal.Sokol.ImGUI.ImDrawList_AddCircleFilled(Internal.Sokol.ImGUI.igGetWindowDrawList(),center.ToImVec2(),radius,Palettes.ONE_BIT_MONITOR_GLOW[1],64);
+        }
         public static unsafe void DrawQuad(Vector2[] points)
         {
             var p = Internal.Sokol.ImGUI.igGetWindowDrawList();
