@@ -3,149 +3,95 @@ using Zinc.Core;
 
 namespace Zinc;
 
-public partial record struct ParticleEmitterComponent : IComponent
+public record struct ParticleEmitterComponent : IComponent
 {
-    public class EmitterConfig
+    public int MaxParticles {get; private set;} = 100;
+    public ParticleEmitterConfig Config;
+    public bool[] Active;
+    public float[] X;
+    public float[] Y;
+    public double[] Age;
+    public int Count = 0;
+    public double Accumulator = 0;
+    public ParticleEmitterComponent(int maxParticles, ParticleEmitterConfig? config = null)
     {
-        public int MaxParticles;
-        public float EmissionRate;
-        public ParticleConfig ParticleConfig;
-        public EmitterConfig(int maxParticles, float emissionRate, ParticleConfig particleConfig)
-        {
-            MaxParticles = maxParticles;
-            EmissionRate = emissionRate;
-            ParticleConfig = particleConfig;
-        }
+        Config = config ?? ParticleEmitterConfig.DefaultConfig;
+        Active = new bool[maxParticles];
+        X = new float[maxParticles];
+        Y = new float[maxParticles];
+        Age = new double[maxParticles];   
+        Accumulator = Config.EmissionRate;
+    }
+    public void Resolve(int index, ref float x, ref float y,ref float width, ref float height, ref float rotation, ref Color color)
+    {
+        double sampleTime = Age[index] / Config.Lifespan;
+        X[index] += SampleTransition(Config.DX, sampleTime);
+        Y[index] += SampleTransition(Config.DY, sampleTime);
+        x = X[index];
+        y = Y[index];
+        width = SampleTransition(Config.Width, sampleTime);
+        height = SampleTransition(Config.Height, sampleTime);
+        rotation = SampleTransition(Config.Rotation, sampleTime);
+        color = SampleColorTransition(Config.Color, sampleTime);
     }
 
-    public EmitterConfig Config { get; set; }
-    public List<Particle> Particles {get; private set;}
-    public double Accumulator = 0f;
-    public ParticleEmitterComponent(EmitterConfig c)
+    public void InitParticle(int i)
     {
-        Config = c;
-        Particles = new List<Particle>(c.MaxParticles);
+        Active[i] = true;
+        X[i] = 0;
+        Y[i] = 0;
+        Age[i] = 0;
     }
 
-    public class ParticleConfig
+    private float SampleTransition(Transition<float> transition, double sampleTime)
     {
-        public enum ParticlePrimitiveType
-        {
-            Rectangle,
-            Line,
-            LineStrip,
-            Triangle,
-            // TriangleStrip looks like shit
-        }
-        public float Lifespan;
-        public Vector2 EmissionPoint;
-        public ParticlePrimitiveType ParticleType;
-        public Transition<float> DX;
-        public Transition<float> DY;
-        public Transition<float> Width;
-        public Transition<float> Height;
-        public Transition<float> Rotation;
-        public Transition<Color> Color;
-
-        public ParticleConfig(Vector2 emissionPoint, ParticlePrimitiveType type, float lifespan, Transition<float> dx, Transition<float> dy, Transition<float> width,
-            Transition<float> height, Transition<Color> color, Transition<float> rotation)
-        {
-            ParticleType = type;
-            EmissionPoint = emissionPoint;
-            Lifespan = lifespan;
-            DX = dx;
-            DY = dy;
-            Width = width;
-            Height = height;
-            Color = color;
-            Rotation = rotation;
-        }
-
-        public ParticleConfig(ParticleConfig c)
-        {
-            ParticleType = c.ParticleType;
-            EmissionPoint = c.EmissionPoint;
-            Lifespan = c.Lifespan;
-            DX = c.DX;
-            DY = c.DY;
-            Width = c.Width;
-            Height = c.Height;
-            Color = c.Color;
-            Rotation = c.Rotation;
-        }
-
-        public ParticleConfig()
-        {
-            EmissionPoint = Vector2.Zero;
-            ParticleType = DefaultParticleConfig.ParticleType;
-            Lifespan = DefaultParticleConfig.Lifespan;
-            DX = DefaultParticleConfig.DX;
-            DY = DefaultParticleConfig.DY;
-            Width = DefaultParticleConfig.Width;
-            Height = DefaultParticleConfig.Height;
-            Color = DefaultParticleConfig.Color;
-            Rotation = DefaultParticleConfig.Rotation;
-        }
-
-        public void Resolve(double time,ref float dx, ref float dy, ref float rotation, ref float width,ref float height,ref Color color)
-        {
-            var sampleTime = time / Lifespan;
-            dx = Quick.MapF((float)DX.Sample(sampleTime), 0f, 1f, DX.StartValue, DX.TargetValue);
-            dy = Quick.MapF((float)DY.Sample(sampleTime), 0f, 1f, DY.StartValue, DY.TargetValue);
-            width = Quick.MapF((float)Width.Sample(sampleTime), 0f, 1f, Width.StartValue, Width.TargetValue);
-            height = Quick.MapF((float)Height.Sample(sampleTime), 0f, 1f, Height.StartValue, Height.TargetValue);
-            rotation = Quick.MapF((float)Rotation.Sample(sampleTime), 0f, 1f, Rotation.StartValue,
-                Rotation.TargetValue);
-            ResolveColorTransition(ref color, sampleTime);
-        }
-        void ResolveColorTransition(ref Color color,double sampleTime)
-        {
-            float sample = (float)Color.Sample(sampleTime);
-            color.A = Quick.MapF(sample,0f,1f,Color.StartValue.internal_color.a,Color.TargetValue.internal_color.a);
-            color.R = Quick.MapF(sample,0f,1f,Color.StartValue.internal_color.r,Color.TargetValue.internal_color.r);
-            color.G = Quick.MapF(sample,0f,1f,Color.StartValue.internal_color.g,Color.TargetValue.internal_color.g);
-            color.B = Quick.MapF(sample,0f,1f,Color.StartValue.internal_color.b,Color.TargetValue.internal_color.b);
-        }
+        float sample = (float)transition.Sample(sampleTime);
+        return Quick.MapF(sample, 0f, 1f, transition.StartValue, transition.TargetValue);
     }
 
-    public static readonly ParticleConfig DefaultParticleConfig = new ParticleConfig(Vector2.Zero, 
-        ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Rectangle,
-        1.5f,
-        new (4,0.1f,Easing.Option.EaseInOutExpo),
-        new (4,0.1f,Easing.Option.EaseInOutExpo),
-        new (4,200,Easing.Option.EaseInOutExpo),
-        new (4,16,Easing.Option.EaseInOutExpo),
-        new (new Color(1,1,1,1),new Color(0,1,1,1),Easing.Option.EaseInOutExpo),
-        new (0,3 *MathF.PI,Easing.Option.EaseInOutExpo));
-    public class Particle
+    private Color SampleColorTransition(Transition<Color> transition, double sampleTime)
     {
-        public bool Active = false;
-        public float X = 0;
-        public float Y = 0;
-        public float DX = 0;
-        public float DY = 0;
-        public float Width = 8;
-        public float Height = 8;
-        public float Rotation = 0;
-        public double Age = 0;
-        public Color Color = Palettes.ENDESGA[19];
-        public ParticleConfig Config = DefaultParticleConfig;
-
-        public Particle(){}
-
-        public void Reset()
-        {
-            Age = 0;
-            X = 0;
-            Y = 0;
-            DX = 0;
-            DY = 0;
-            Rotation = 0;
-        }
-
-        public void Resolve()
-        {
-            Config.Resolve(Age,ref DX, ref DY, ref Rotation, ref Width,ref Height,ref Color);
-        }
+        float sample = (float)transition.Sample(sampleTime);
+        return new Color(
+            Quick.MapF(sample, 0f, 1f, transition.StartValue.R, transition.TargetValue.R),
+            Quick.MapF(sample, 0f, 1f, transition.StartValue.G, transition.TargetValue.G),
+            Quick.MapF(sample, 0f, 1f, transition.StartValue.B, transition.TargetValue.B),
+            Quick.MapF(sample, 0f, 1f, transition.StartValue.A, transition.TargetValue.A)
+        );
     }
+
+    
+}
+
+public class ParticleEmitterConfig
+{
+    public float EmissionRate;
+    public ParticlePrimitiveType Type; 
+    public float Lifespan;
+    public Transition<float> DX;
+    public Transition<float> DY;
+    public Transition<float> Width;
+    public Transition<float> Height;
+    public Transition<Color> Color;
+    public Transition<float> Rotation;
+    public enum ParticlePrimitiveType
+    {
+        Rectangle,
+        Line,
+        LineStrip,
+        Triangle,
+        // TriangleStrip looks like shit
+    }
+
+    public static readonly ParticleEmitterConfig DefaultConfig = new ParticleEmitterConfig(){
+        EmissionRate = 3f,
+        Type = ParticlePrimitiveType.Rectangle,
+        Lifespan = 0.5f,
+        DX = new (4,0.1f,Easing.Option.EaseInOutExpo),
+        DY = new (4,0.1f,Easing.Option.EaseInOutExpo),
+        Width = new (4,200,Easing.Option.EaseInOutExpo),
+        Height = new (4,16,Easing.Option.EaseInOutExpo),
+        Color = new (new Color(1,1,1,1),new Color(0,1,1,1),Easing.Option.EaseInOutExpo),
+        Rotation = new (0,3 *MathF.PI,Easing.Option.EaseInOutExpo)
+    };
 }

@@ -677,72 +677,66 @@ public static partial class Engine
         GP.reset_color();
     }
     
-    public static void DrawParticles(ParticleEmitterComponent c, List<int> activeIndicies)
+    public static void DrawParticles(Anchor a, ParticleEmitterComponent c)
     {
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
-        switch (c.Config.ParticleConfig.ParticleType)
-        {
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Rectangle:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_filled_rect(0,0,c.Particles[i].Width,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Line:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_line(0,0,c.Particles[i].Width,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Triangle:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_filled_triangle(0,0,c.Particles[i].Width,0,c.Particles[i].Width / 2f,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.LineStrip:
-                var pts = new Zinc.NativeInterop.Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
-                int first = activeIndicies[0];
-                int ct = 0;
-                foreach (var i in activeIndicies)
-                {
-                    pts[ct] = new sgp_vec2() { x = c.Particles[i].X, y = c.Particles[i].Y };
-                    ct++;
-                }
-                GP.push_transform();
-                GP.set_color(c.Particles[first].Color.internal_color.r, c.Particles[first].Color.internal_color.g, c.Particles[first].Color.internal_color.b, c.Particles[first].Color.internal_color.a);
+        
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
 
-                // GP.sgp_translate(p.x, p.y);
-                GP.translate(c.Particles[first].Config.EmissionPoint.X + c.Particles[first].X,c.Particles[first].Config.EmissionPoint.Y + c.Particles[first].Y);
-                GP.rotate_at(c.Particles[first].Rotation, c.Particles[first].Width / 2f, c.Particles[first].Height / 2f);
-                // GP.sgp_scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                unsafe
+        float particle_x = 0f;
+        float particle_y = 0f;;
+        float particle_width = 0f;
+        float particle_height = 0f;
+        float particle_rot = 0f;
+        Color particle_color = new Color(0,0,0,0);
+        for (int i = 0; i < c.Count; i++)
+        {
+            if(c.Active[i])
+            {
+                c.Resolve(i, ref particle_x, ref particle_y, ref particle_width, ref particle_height, ref particle_rot, ref particle_color);
+                GP.push_transform();
+                GP.set_color(particle_color.internal_color.r, particle_color.internal_color.g, particle_color.internal_color.b, particle_color.internal_color.a);
+                GP.translate(world_pos.X + particle_x, world_pos.Y + particle_y);
+                GP.rotate_at(world_rotation + particle_rot, particle_width / 2f, particle_height / 2f);
+                switch (c.Config.Type)
                 {
-                    GP.draw_lines_strip(pts.Ptr,(uint)activeIndicies.Count);
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Rectangle:
+                        GP.draw_filled_rect(0,0,particle_width,particle_height);
+                        break;
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Line:
+                        GP.draw_line(0,0,particle_width,particle_height);
+                        break;
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Triangle:
+                        GP.draw_filled_triangle(0,0,particle_width,0,particle_width / 2f,particle_height);
+                        break;
                 }
                 GP.pop_transform();
-                break;
+                GP.reset_color();
+            }
+        }
+            // case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.LineStrip:
+            //     var pts = new Zinc.NativeInterop.Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
+            //     int first = activeIndicies[0];
+            //     int ct = 0;
+            //     foreach (var i in activeIndicies)
+            //     {
+            //         pts[ct] = new sgp_vec2() { x = c.Particles[i].X, y = c.Particles[i].Y };
+            //         ct++;
+            //     }
+            //     GP.push_transform();
+            //     GP.set_color(c.Particles[first].Color.internal_color.r, c.Particles[first].Color.internal_color.g, c.Particles[first].Color.internal_color.b, c.Particles[first].Color.internal_color.a);
+
+            //     // GP.sgp_translate(p.x, p.y);
+            //     GP.translate(c.Particles[first].Config.EmissionPoint.X + c.Particles[first].X,c.Particles[first].Config.EmissionPoint.Y + c.Particles[first].Y);
+            //     GP.rotate_at(c.Particles[first].Rotation, c.Particles[first].Width / 2f, c.Particles[first].Height / 2f);
+            //     // GP.sgp_scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
+            //     unsafe
+            //     {
+            //         GP.draw_lines_strip(pts.Ptr,(uint)activeIndicies.Count);
+            //     }
+            //     GP.pop_transform();
+            //     break;
             // case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.TriangleStrip:
             //     var strip_pts = new Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
             //     int first_strip_pt = activeIndicies[0];
@@ -764,9 +758,6 @@ public static partial class Engine
             //     }
             //     GP.sgp_pop_transform();
             //     break;
-            
-        }
-        GP.reset_color();
     }
 
     public enum LogLevel

@@ -75,83 +75,51 @@ public class SceneRenderSystem : RenderSystem
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
-                    (renderEntity as Anchor).GetWorldTransform().transform.Decompose(out var p, out var rot, out var scale);
                     ref var emitter = ref renderEntity.ECSEntity.Get<ParticleEmitterComponent>();
-                     // Update the particles
-                    List<int> activeIndices = new List<int>();
-                    // List<int> newIndicies = new List<int>();
+
+                    //make this emit at emission rate per second:
+                    // var requestedNewParticles = (int)(emitter.EmissionRate * dt);
+                    // var requestedNewParticles = emitter.EmissionRate;
+                    // Console.WriteLine(requestedNewParticles);
+
                     var possibleParticleSlots = emitter.Config.EmissionRate * dt;
                     emitter.Accumulator += possibleParticleSlots;
-                    var freeSlots = (int)emitter.Accumulator;
+                    var requestedNewParticles = (int)emitter.Accumulator;
 
-                    // Reactivate old inactive particles if possible
-                    for (int i = 0; i < emitter.Particles.Count; i++)
+                    var limit = emitter.Count + requestedNewParticles > emitter.MaxParticles ? emitter.MaxParticles : emitter.Count + requestedNewParticles;
+                    //update particle lifetimes
+                    for (int i = 0; i < limit; i++)
                     {
-                        if (emitter.Particles[i].Active)
+                        if(emitter.Active[i])
                         {
-                            emitter.Particles[i].Age += dt;
-                            if (emitter.Particles[i].Age > emitter.Config.ParticleConfig.Lifespan)
+                            emitter.Age[i] += dt;
+                            if (emitter.Age[i] > emitter.Config.Lifespan)
                             {
-                                //staged for inactive
-                                if (freeSlots == 0)
+                                if(requestedNewParticles == 0)
                                 {
-                                    //go inactive if no free slots
-                                    emitter.Particles[i].Active = false;
-                                    continue;
+                                    //turn off this particle, dont need it anymore
+                                    emitter.Active[i] = false;
+                                    emitter.Count--;
                                 }
-                                
-                                //otherwise remake this particle
-                                emitter.Particles[i].Reset();
-                                emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                                emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
-                                emitter.Particles[i].Resolve();
-                        
-                                activeIndices.Add(i);
-                                freeSlots--;
-                                emitter.Accumulator--;
-                            }
-
-                            else
-                            {
-                                //particle still active
-                                emitter.Particles[i].Resolve();
-                                emitter.Particles[i].X += emitter.Particles[i].DX;
-                                emitter.Particles[i].Y += emitter.Particles[i].DY;
-                                activeIndices.Add(i);
+                                else if (emitter.Count < emitter.MaxParticles)
+                                {
+                                    emitter.InitParticle(i);
+                                    requestedNewParticles--;
+                                    emitter.Count++;
+                                    emitter.Accumulator--;
+                                }
                             }
                         }
-                        else if (freeSlots > 0)
+                        else if (requestedNewParticles > 0 && emitter.Count < emitter.MaxParticles)
                         {
-                            //reset and toggle to active if there is a slot 
-                            emitter.Particles[i].Reset();
-                            emitter.Particles[i].Active = true;
-                            emitter.Particles[i].Config = new ParticleEmitterComponent.ParticleConfig(emitter.Config.ParticleConfig);
-                            emitter.Particles[i].Config.EmissionPoint = new(p.X, p.Y);
-                            emitter.Particles[i].Resolve();
-                        
-                            activeIndices.Add(i);
-                            freeSlots--;
+                            emitter.InitParticle(i);
+                            requestedNewParticles--;
                             emitter.Accumulator--;
+                            emitter.Count++;
                         }
                     }
 
-                    // Create new particles if needed and maximum limit is not reached
-                    while (freeSlots > 0 && emitter.Particles.Count < emitter.Config.MaxParticles)
-                    {
-                        ParticleEmitterComponent.Particle newParticle = new();
-                        newParticle.Active = true;
-                        emitter.Particles.Add(newParticle);
-                        newParticle.Resolve();
-                        activeIndices.Add(emitter.Particles.Count - 1);
-                        freeSlots--;
-                        emitter.Accumulator--;
-                    }
-
-                    // Draw the particles
-                    if (activeIndices.Count > 0)
-                    {
-                        Engine.DrawParticles(emitter, activeIndices);
-                    }
+                    Engine.DrawParticles(renderEntity as Anchor,emitter);
                 }
             }
         }
