@@ -21,7 +21,6 @@ public class GridSystem : DSystem, IPreUpdateSystem
             var children = grid.GetChildren();
             var startX = - gc.GridWidth * gc.GridPivot.X;
             var startY = - gc.GridHeight * gc.GridPivot.Y;
-            Console.WriteLine("Grid width: " + gc.GridWidth + " Grid height: " + gc.GridHeight);
             for (int i = 0; i < children.Count; i++)
             {
                 grid.ECSEntity.Get<GridComponent>().GetGridPosition(i, out var x, out var y);
