@@ -677,15 +677,14 @@ public static partial class Engine
         GP.reset_color();
     }
     
-    public static void DrawParticles(Anchor a, ParticleEmitterComponent c)
+    public static void DrawParticles(Anchor a, ParticleEmitterComponent c, double dt)
     {
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         
         var world = a.GetWorldTransform();
         world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
 
-        float particle_x = 0f;
-        float particle_y = 0f;;
+        Vector2 particle_pos = Vector2.Zero;
         float particle_width = 0f;
         float particle_height = 0f;
         float particle_rot = 0f;
@@ -694,10 +693,10 @@ public static partial class Engine
         {
             if(c.Active[i])
             {
-                c.Resolve(i, ref particle_x, ref particle_y, ref particle_width, ref particle_height, ref particle_rot, ref particle_color);
+                c.Resolve(i, dt, ref particle_pos, ref particle_width, ref particle_height, ref particle_rot, ref particle_color);
                 GP.push_transform();
                 GP.set_color(particle_color.internal_color.r, particle_color.internal_color.g, particle_color.internal_color.b, particle_color.internal_color.a);
-                GP.translate(world_pos.X + particle_x, world_pos.Y + particle_y);
+                GP.translate(world_pos.X + particle_pos.X, world_pos.Y + particle_pos.Y);
                 GP.rotate_at(world_rotation + particle_rot, particle_width / 2f, particle_height / 2f);
                 switch (c.Config.Type)
                 {

@@ -76,15 +76,10 @@ public class SceneRenderSystem : RenderSystem
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
                     ref var emitter = ref renderEntity.ECSEntity.Get<ParticleEmitterComponent>();
-
-                    //make this emit at emission rate per second:
-                    // var requestedNewParticles = (int)(emitter.EmissionRate * dt);
-                    // var requestedNewParticles = emitter.EmissionRate;
-                    // Console.WriteLine(requestedNewParticles);
-
+                    if(emitter.Config.EmitOnce && emitter.Config.HasEmit){return;}
                     var possibleParticleSlots = emitter.Config.EmissionRate * dt;
                     emitter.Accumulator += possibleParticleSlots;
-                    var requestedNewParticles = (int)emitter.Accumulator;
+                    var requestedNewParticles = (int)emitter.Accumulator > emitter.MaxParticles ? emitter.MaxParticles : (int)emitter.Accumulator;
 
                     var limit = emitter.Count + requestedNewParticles > emitter.MaxParticles ? emitter.MaxParticles : emitter.Count + requestedNewParticles;
                     //update particle lifetimes
@@ -95,13 +90,10 @@ public class SceneRenderSystem : RenderSystem
                             emitter.Age[i] += dt;
                             if (emitter.Age[i] > emitter.Config.Lifespan)
                             {
-                                if(requestedNewParticles == 0)
-                                {
-                                    //turn off this particle, dont need it anymore
-                                    emitter.Active[i] = false;
-                                    emitter.Count--;
-                                }
-                                else if (emitter.Count < emitter.MaxParticles)
+                                //turn off this particle, dont need it anymore
+                                emitter.Active[i] = false;
+                                emitter.Count--;
+                                if (emitter.Count < emitter.MaxParticles)
                                 {
                                     emitter.InitParticle(i);
                                     requestedNewParticles--;
@@ -119,7 +111,7 @@ public class SceneRenderSystem : RenderSystem
                         }
                     }
 
-                    Engine.DrawParticles(renderEntity as Anchor,emitter);
+                    Engine.DrawParticles(renderEntity as Anchor,emitter,dt);
                 }
             }
         }
