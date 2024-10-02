@@ -206,8 +206,6 @@ public static class ImGUIHelper
         public static unsafe bool Color(string label, ref Color c)
         {
             var b = System.Text.Encoding.UTF8.GetBytes(label);
-            // var str_items = System.Text.Encoding.UTF8.GetBytes(String.Join("\0",items));
-            // int v = value;
             float[] c_arr = [c.R, c.G, c.B, c.A];
             fixed (byte* ptr = b)
             {

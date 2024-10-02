@@ -8,6 +8,7 @@ public record struct ParticleEmitterComponent : IComponent
     public int MaxParticles {get; private set;} = 100;
     public ParticleEmitterConfig Config;
     public bool[] Active;
+    public Vector2[] SpawnLocation;
     public Vector2[] Position;
     public Vector2[] Velocity;
     public Vector2[] Acceleration;
@@ -22,6 +23,7 @@ public record struct ParticleEmitterComponent : IComponent
         Position = new Vector2[maxParticles];
         Velocity = new Vector2[maxParticles];
         Acceleration = new Vector2[maxParticles];
+        SpawnLocation = new Vector2[maxParticles];
         Mass = new float[maxParticles];
         Age = new double[maxParticles];   
         Accumulator = Config.EmissionRate;
@@ -43,10 +45,11 @@ public record struct ParticleEmitterComponent : IComponent
         color = SampleColorTransition(Config.Color, sampleTime);
     }
 
-    public void InitParticle(int i)
+    public void InitParticle(int i, Vector2 spawnLocation)
     {
         Active[i] = true;
         Position[i] = Vector2.Zero;
+        SpawnLocation[i] = spawnLocation;
 
         // Initialize velocity with random direction and magnitude
         Velocity[i] = Config.InitialEmissionDirectionFunc() * Config.InitialSpeedFunc();
@@ -116,7 +119,7 @@ public class ParticleEmitterConfig
         Lifespan = 0.5f,
         Width = new (4,200,Easing.Option.EaseInOutExpo),
         Height = new (4,16,Easing.Option.EaseInOutExpo),
-        Color = new (new Color(1,1,1,1),new Color(0,1,1,1),Easing.Option.EaseInOutExpo),
+        Color = new (new Color(1,1,1,1),new Color(1,1,1,0),Easing.Option.EaseInOutExpo),
         Rotation = new (0,3 *MathF.PI,Easing.Option.EaseInOutExpo)
     };
 }

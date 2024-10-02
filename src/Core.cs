@@ -481,7 +481,7 @@ public static partial class Engine
         // Clear the frame buffer.
         if (Clear)
         {
-            GP.set_color(ClearColor.internal_color.r, ClearColor.internal_color.g, ClearColor.internal_color.b, ClearColor.internal_color.a);
+            GP.set_color(ClearColor.R, ClearColor.G, ClearColor.B, ClearColor.A);
             GP.clear();
             GP.reset_color();
         }
@@ -661,7 +661,7 @@ public static partial class Engine
     {
         //argb
         //rgba
-        GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
+        GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
         var world = a.GetWorldTransform();
         world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
@@ -688,15 +688,16 @@ public static partial class Engine
         float particle_width = 0f;
         float particle_height = 0f;
         float particle_rot = 0f;
-        Color particle_color = new Color(0,0,0,0);
+        Color particle_color = new Color(0,0,0,1f);
         for (int i = 0; i < c.Count; i++)
         {
             if(c.Active[i])
             {
                 c.Resolve(i, dt, ref particle_pos, ref particle_width, ref particle_height, ref particle_rot, ref particle_color);
                 GP.push_transform();
-                GP.set_color(particle_color.internal_color.r, particle_color.internal_color.g, particle_color.internal_color.b, particle_color.internal_color.a);
-                GP.translate(world_pos.X + particle_pos.X, world_pos.Y + particle_pos.Y);
+                GP.set_color(particle_color.R,particle_color.G, particle_color.B, particle_color.A);
+                // GP.translate(world_pos.X + particle_pos.X, world_pos.Y + particle_pos.Y);
+                GP.translate(c.SpawnLocation[i].X + particle_pos.X, c.SpawnLocation[i].Y + particle_pos.Y);
                 GP.rotate_at(world_rotation + particle_rot, particle_width / 2f, particle_height / 2f);
                 switch (c.Config.Type)
                 {

@@ -76,6 +76,7 @@ public class SceneRenderSystem : RenderSystem
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
                     ref var emitter = ref renderEntity.ECSEntity.Get<ParticleEmitterComponent>();
+                    (renderEntity as Anchor).GetWorldTransform().transform.Decompose(out var world_pos, out var world_rotation, out var scale);
                     if(emitter.Config.EmitOnce && emitter.Config.HasEmit){return;}
                     var possibleParticleSlots = emitter.Config.EmissionRate * dt;
                     emitter.Accumulator += possibleParticleSlots;
@@ -95,7 +96,7 @@ public class SceneRenderSystem : RenderSystem
                                 emitter.Count--;
                                 if (emitter.Count < emitter.MaxParticles)
                                 {
-                                    emitter.InitParticle(i);
+                                    emitter.InitParticle(i,world_pos);
                                     requestedNewParticles--;
                                     emitter.Count++;
                                     emitter.Accumulator--;
@@ -104,7 +105,7 @@ public class SceneRenderSystem : RenderSystem
                         }
                         else if (requestedNewParticles > 0 && emitter.Count < emitter.MaxParticles)
                         {
-                            emitter.InitParticle(i);
+                            emitter.InitParticle(i,world_pos);
                             requestedNewParticles--;
                             emitter.Accumulator--;
                             emitter.Count++;

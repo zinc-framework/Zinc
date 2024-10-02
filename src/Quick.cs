@@ -31,6 +31,14 @@ public static class Quick
     public static readonly Vector2 UnitRight = new Vector2(MathF.Cos(0f),MathF.Sin(0f));
     public static readonly Vector2 UnitLeft = new Vector2(MathF.Cos(MathF.PI),MathF.Sin(MathF.PI));
     public static readonly Vector2 UnitDown = new Vector2(MathF.Cos(MathF.PI * 1.5f),-MathF.Sin(MathF.PI * 1.5f));
+    //Rand unit range:
+    public static Vector2 RandUnitPos(float startRadian, float endRadian)
+    {
+        var radian = MapF(RandFloat(),0,1,startRadian,endRadian);
+        return new Vector2(
+            MathF.Cos(radian),
+            -MathF.Sin(radian));
+    }
     
     public static double Map(double value, double fromSource, double toSource, double fromTarget, double toTarget)
     {
