@@ -12,11 +12,12 @@ namespace Zinc;
 
 public class CoroutineSystem : DSystem, IUpdateSystem
 {
-    QueryDescription coroutine = new QueryDescription().WithAll<EntityID,CoroutineComponent>().WithNone<Destroy>();
+    QueryDescription coroutine = new QueryDescription().WithAll<EntityID,CoroutineComponent,ActiveState>().WithNone<Destroy>();
     public void Update(double dt)
     {
         CommandBuffer cb = new(Engine.ECSWorld);
-        Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref EntityID eID, ref CoroutineComponent cc) =>  {
+        Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref ActiveState active, ref EntityID eID, ref CoroutineComponent cc) =>  {
+            if(!active.Active){return;}
             var managedEntity = Engine.GetEntity(eID.ID) as Coroutine;
             // Ensure the stack is initialized
             if (cc.ExecutionStack == null)

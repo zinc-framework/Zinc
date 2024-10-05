@@ -6,12 +6,20 @@ namespace Zinc;
 [Component<CoroutineComponent>]
 public partial class Coroutine : SceneObject
 {
-    public Coroutine(IEnumerator coroutineMethod, string name = "coroutine", Action? completionCallback = null, bool startEnabled = true, Scene? scene = null) : base(startEnabled, scene)
+    public Coroutine(IEnumerator coroutineMethod, string name = "coroutine", Action? completionCallback = null, bool startAutomatically = true, Scene? scene = null) : base(startAutomatically, scene)
     {
         CoroutineMethod = coroutineMethod;
         CoroutineName = name;
         CompletionCallback = completionCallback;
     }
+
+    public void Reset(bool startAfterReset = true)
+    {
+        ExecutionStack = null;
+        Active = startAfterReset;
+    }
+    public void Start() => Active = true;
+    public void Pause() => Active = false;
 }
 
 public abstract class CustomYieldInstruction
