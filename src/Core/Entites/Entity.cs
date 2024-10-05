@@ -33,20 +33,35 @@ public partial class Entity
 }
 
 /// <summary>
-/// An anchor is a point in a scene
+/// A SceneObject is something that is associated with a scene
 /// </summary>
-[Component<Position>]
 [Component<SceneMember>]
-public partial class Anchor : Entity
+public partial class SceneObject : Entity
 {
     public Scene Scene => Engine.SceneLookup[SceneID];
-    public Anchor? Parent {get; private set; } = null;
-    private List<Anchor> children = new();
-    public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
+    public SceneObject(bool startEnabled, Scene? scene = null) 
         : base(startEnabled)
     {
         SceneID = scene != null ? scene.ID : Engine.TargetScene.ID;
         Engine.SceneEntityMap[SceneID].Add(ID);
+    }
+    protected override void OnDestroy()
+    {
+        Engine.SceneEntityMap[SceneID].Remove(ID);
+    }
+}
+
+/// <summary>
+/// An anchor is a point in a scene
+/// </summary>
+[Component<Position>]
+public partial class Anchor : SceneObject
+{
+    public Anchor? Parent {get; private set; } = null;
+    private List<Anchor> children = new();
+    public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
+        : base(startEnabled,scene)
+    {
         Anchor? targetParent = null;
         if(!(this is Scene.SceneRootAnchor))
         {
@@ -100,7 +115,7 @@ public partial class Anchor : Entity
         {
             Parent.children.Remove(this);
         }
-        Engine.SceneEntityMap[SceneID].Remove(ID);
+        base.OnDestroy();
     }
 
     public Position LocalPosition => ECSEntity.Get<Position>();

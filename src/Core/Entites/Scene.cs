@@ -48,6 +48,15 @@ public partial class Scene : Entity
     {
         if (MountStatus == SceneMountStatus.Mounted)
         {
+            Console.WriteLine("unmounting scene");
+            Entity staged;
+            var sceneEntityIDs = new List<int>(Engine.SceneEntityMap[ID]);
+            foreach (var eid in sceneEntityIDs)
+            {
+                Engine.TryGetEntity(eid,out staged);
+                if(staged is Anchor) {continue;} //we handle anchors seperatly below
+                staged.Destroy(); //destroys things like coroutines that are attached to a scene but not an anchor
+            }
             Cleanup();
             root!.Destroy();
             root = null;

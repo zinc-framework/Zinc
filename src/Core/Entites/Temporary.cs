@@ -4,19 +4,12 @@ using Arch.Core.Extensions;
 namespace Zinc;
 
 [Component<TemporaryComponent>]
-[Component<RenderItem>]
-[Component<ShapeRenderer>("Renderer")]
-public partial class TemporaryShape : Anchor
+public partial class TemporaryShape : Shape
 {
-    public TemporaryShape(float lifetime = 2, float width = 32, float height = 32, Color color = null, Scene? scene = null, bool startEnabled = true, Anchor? parent = null, List<Anchor>? children = null)
-        : base(startEnabled,scene,parent:parent,children:children)
+    public TemporaryShape(float lifetime = 2, float width = 32, float height = 32, Color color = null, Scene? scene = null, bool startEnabled = true, Action<Shape,double> update = null, Anchor? parent = null, List<Anchor>? children = null)
+        : base(width,height,color,scene,startEnabled,update,parent,children)
     {
         Lifetime = lifetime;
-        Renderer_Pivot = new System.Numerics.Vector2(0.5f);
-        Renderer_Color = color ?? Palettes.ENDESGA[9];
-        Renderer_Width = width;
-        Renderer_Height = height;
-        RenderOrder = Scene.GetNextSceneRenderCounter();
     }
 }
 

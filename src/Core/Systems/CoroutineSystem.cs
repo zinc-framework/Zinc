@@ -12,31 +12,32 @@ namespace Zinc;
 
 public class CoroutineSystem : DSystem, IUpdateSystem
 {
-    QueryDescription coroutine = new QueryDescription().WithAll<Coroutine>();
+    QueryDescription coroutine = new QueryDescription().WithAll<EntityID,CoroutineComponent>().WithNone<Destroy>();
     public void Update(double dt)
     {
         CommandBuffer cb = new(Engine.ECSWorld);
-        Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref Coroutine c) =>  {
+        Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref EntityID eID, ref CoroutineComponent cc) =>  {
+            var managedEntity = Engine.GetEntity(eID.ID) as Coroutine;
             // Ensure the stack is initialized
-            if (c.executionStack == null)
+            if (cc.ExecutionStack == null)
             {
-                c.executionStack = new Stack<IEnumerator>();
-                c.executionStack.Push(c.coroutine); // Assuming 'coroutine' is the initial IEnumerator
+                cc.ExecutionStack = new Stack<IEnumerator>();
+                cc.ExecutionStack.Push(cc.CoroutineMethod); // Assuming 'coroutine' is the initial IEnumerator
             }
 
-            if (c.executionStack.Count > 0)
+            if (cc.ExecutionStack.Count > 0)
             {
-                var currentCoroutine = c.executionStack.Peek();
+                var currentCoroutine = cc.ExecutionStack.Peek();
                 if (!currentCoroutine.MoveNext())
                 {
-                    c.executionStack.Pop(); // Finished, so remove it
-                    if (c.executionStack.Count > 0)
+                    cc.ExecutionStack.Pop(); // Finished, so remove it
+                    if (cc.ExecutionStack.Count > 0)
                     {
                         return; // Exit early, as there's another coroutine to resume next update
                     }
                     // Otherwise, this was the last coroutine
-                    c.completionCallback?.Invoke();
-                    Console.WriteLine("DESTROYING COROUTINE " + c.name);
+                    cc.CompletionCallback?.Invoke();
+                    Console.WriteLine("DESTROYING COROUTINE " + cc.CoroutineName);
                     cb.Add(in e, new Destroy());
                 }
                 else
@@ -50,14 +51,17 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     }
                     else if (currentYield is IEnumerator nestedCoroutine)
                     {
-                        c.executionStack.Push(nestedCoroutine);
+                        cc.ExecutionStack.Push(nestedCoroutine);
                     }
-                    else if (currentYield is Coroutines.CustomYieldInstruction customYield)
+                    else if (currentYield is CustomYieldInstruction customYield)
                     {
+                        Console.WriteLine("Custom yield waiting");
                         if (!customYield.KeepWaiting)
                         {
-                            c.executionStack.Pop();
+                            Console.WriteLine("Custom done waiting");
+                            cc.ExecutionStack.Pop();
                         }
+                        yield return null;
                     }
                 }
             }

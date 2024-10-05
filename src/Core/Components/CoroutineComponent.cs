@@ -1,5 +1,5 @@
 using System.Collections;
 
 namespace Zinc;
-
-public record struct Coroutine(IEnumerator coroutine, string name, Action completionCallback, Stack<IEnumerator> executionStack = null);
+//should make this into an entity so it gets cleaned up properly when scenes are unloaded
+public record struct CoroutineComponent(IEnumerator CoroutineMethod, string CoroutineName, Action CompletionCallback, Stack<IEnumerator> ExecutionStack = null) : IComponent;

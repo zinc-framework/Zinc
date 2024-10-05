@@ -3,7 +3,7 @@ namespace Zinc.Core;
 //https://garry.tv/2018/01/16/timesince/
 public struct TimeSince
 {
-    float time;
+    public float time;
 
     public static implicit operator float(TimeSince ts)
     {
