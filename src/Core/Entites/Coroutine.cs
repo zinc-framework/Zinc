@@ -16,7 +16,7 @@ public partial class Coroutine : SceneObject
 
 public abstract class CustomYieldInstruction
 {
-    public abstract bool KeepWaiting { get; }
+    public abstract IEnumerator Wait();
 }
 
 
@@ -31,14 +31,11 @@ public class WaitForSeconds : CustomYieldInstruction
         runTime = 0;
     }
 
-    public override bool KeepWaiting
+    public override IEnumerator Wait()
     {
-        get
+        while (runTime < duration)
         {
-            Console.WriteLine($"{Engine.Time}");
-            Console.WriteLine($"{runTime.time}");
-            Console.WriteLine($"{(float)runTime} < {duration} : {(float)runTime < duration}");
-            return runTime < duration;
+            yield return null;
         }
     }
 }

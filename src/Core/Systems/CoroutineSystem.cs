@@ -55,13 +55,7 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     }
                     else if (currentYield is CustomYieldInstruction customYield)
                     {
-                        Console.WriteLine("Custom yield waiting");
-                        if (!customYield.KeepWaiting)
-                        {
-                            Console.WriteLine("Custom done waiting");
-                            cc.ExecutionStack.Pop();
-                        }
-                        yield return null;
+                        cc.ExecutionStack.Push(customYield.Wait());
                     }
                 }
             }
