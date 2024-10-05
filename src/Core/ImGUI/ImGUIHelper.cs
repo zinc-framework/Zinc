@@ -24,17 +24,18 @@ public static class ImGUIHelper
             }
         }
         public static void EndMenu() => Internal.Sokol.ImGUI.igEndMenu();
-        public static void SetNextWindowPosition(Vector2 p)
+        public static void SetNextWindowPosition(Vector2 p,ImGuiCond_ condition = ImGuiCond_.ImGuiCond_Always)
         {
-            SetNextWindowPosition(p.X,p.Y,Internal.Sokol.ImGuiCond_.ImGuiCond_Always,0,0);
+            SetNextWindowPosition(p.X,p.Y,condition,0,0);
         }
         public static void SetNextWindowPosition(float x, float y, Internal.Sokol.ImGuiCond_ condition, float pivot_x, float pivot_y)
         {
             Internal.Sokol.ImGUI.igSetNextWindowPos(new(){x = x, y=y}, (int)condition, new ImVec2(){x = pivot_x,y=pivot_y});
         }
-        public static unsafe void SetNextWindowSize(float width, float height)
+        public static void SetNextWindowSize(Vector2 size, ImGuiCond_ condition = ImGuiCond_.ImGuiCond_Always) => SetNextWindowSize(size.X,size.Y,condition);
+        public static unsafe void SetNextWindowSize(float width, float height, ImGuiCond_ condition = ImGuiCond_.ImGuiCond_Always)
         {
-            Internal.Sokol.ImGUI.igSetNextWindowSize(new ImVec2(){x =width,y=height},(int)Internal.Sokol.ImGuiCond_.ImGuiCond_Always);
+            Internal.Sokol.ImGUI.igSetNextWindowSize(new ImVec2(){x =width,y=height},(int)condition);
         }
         
         public static void SetNextWindowBGAlpha(float alpha)
@@ -239,8 +240,16 @@ public static class ImGUIHelper
             EndMainMenuBar();;
         }
 
-        public static void Window(string name, ImGuiWindowFlags_ flags, Action drawWindow)
+        public static Vector2 DefaultWindowSize = new Vector2(300,500); 
+        public static Vector2 DefaultWindowPosition = new Vector2(100,100); 
+        public static void Window(string name, Action drawWindow, ImGuiCond_ condition = ImGuiCond_.ImGuiCond_Once)
         {
+            Window(name, DefaultWindowPosition, DefaultWindowSize, drawWindow,condition:condition);
+        }
+        public static void Window(string name, Vector2 position, Vector2 size,  Action drawWindow, ImGuiWindowFlags_ flags = ImGuiWindowFlags_.ImGuiWindowFlags_None, ImGuiCond_ condition = ImGuiCond_.ImGuiCond_Always)
+        {
+            SetNextWindowPosition(position,condition);
+            SetNextWindowSize(size,condition);
             Begin(name,flags);
             drawWindow?.Invoke();
             End();
