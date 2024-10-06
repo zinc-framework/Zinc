@@ -36,10 +36,10 @@ public record struct ParticleEmitterComponent : IComponent
 
         pos = Position[index];
 
-        width = SampleTransition(Config.Width, sampleTime);
-        height = SampleTransition(Config.Height, sampleTime);
-        rotation = SampleTransition(Config.Rotation, sampleTime);
-        color = SampleColorTransition(Config.Color, sampleTime);
+        width = Config.Width.Sample(sampleTime);
+        height = Config.Height.Sample(sampleTime);
+        rotation = Config.Rotation.Sample(sampleTime);
+        color = Config.Color.Sample(sampleTime);
     }
 
     public void InitParticle(int i, Vector2 spawnLocation)
@@ -50,26 +50,7 @@ public record struct ParticleEmitterComponent : IComponent
         Velocity[i] = Config.InitialEmissionDirectionFunc() * Config.InitialSpeedFunc();
         Mass[i] = Config.InitialMassFunc();
         Age[i] = 0;
-    }
-
-    private float SampleTransition(Transition<float> transition, double sampleTime)
-    {
-        float sample = (float)transition.Sample(sampleTime);
-        return Quick.MapF(sample, 0f, 1f, transition.StartValue, transition.TargetValue);
-    }
-
-    private Color SampleColorTransition(Transition<Color> transition, double sampleTime)
-    {
-        float sample = (float)transition.Sample(sampleTime);
-        return new Color(
-            Quick.MapF(sample, 0f, 1f, transition.StartValue.R, transition.TargetValue.R),
-            Quick.MapF(sample, 0f, 1f, transition.StartValue.G, transition.TargetValue.G),
-            Quick.MapF(sample, 0f, 1f, transition.StartValue.B, transition.TargetValue.B),
-            Quick.MapF(sample, 0f, 1f, transition.StartValue.A, transition.TargetValue.A)
-        );
-    }
-
-    
+    }   
 }
 
 public class ParticleEmitterConfig
@@ -83,10 +64,10 @@ public class ParticleEmitterConfig
     public Func<Vector2> InitialEmissionDirectionFunc;
     public Func<float> InitialMassFunc;
     public Func<float> InitialSpeedFunc;
-    public Transition<float> Width;
-    public Transition<float> Height;
-    public Transition<Color> Color;
-    public Transition<float> Rotation;
+    public FloatTween Width;
+    public FloatTween Height;
+    public ColorTween Color;
+    public FloatTween Rotation;
     public enum ParticlePrimitiveType
     {
         Rectangle,
@@ -106,9 +87,9 @@ public class ParticleEmitterConfig
         EmissionRate = 200f,
         InitialEmissionDirectionFunc = () => Quick.RandUnitCirclePos(),
         Lifespan = 0.1f,
-        Width = new (4,4,Easing.Option.EaseInOutExpo),
-        Height = new (4,4,Easing.Option.EaseInOutExpo),
-        Color = new (new Color(1,1,1,1),new Color(1,1,1,0),Easing.Option.EaseInOutExpo),
-        Rotation = new (0,3 *MathF.PI,Easing.Option.EaseInOutExpo)
+        Width = new (4,4,Easing.EaseInOutExpo),
+        Height = new (4,4,Easing.EaseInOutExpo),
+        Color = new (new Color(1,1,1,1),new Color(1,1,1,0),Easing.EaseInOutExpo),
+        Rotation = new (0,3 *MathF.PI,Easing.EaseInOutExpo)
     };
 }
