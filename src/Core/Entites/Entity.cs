@@ -183,6 +183,8 @@ public partial class SceneEntity : Anchor
     public SceneEntity(bool startEnabled, Scene? scene = null, Action<Entity, double>? update = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled, scene, parent,children)
     {
+        X = Engine.Width/2f;
+        Y = Engine.Height/2f;
         Update = update;
     }
 }
