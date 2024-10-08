@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Numerics;
+using Zinc.Internal.Sokol;
 
 namespace Zinc.Core;
 
-public abstract class Tween<T>
+public abstract class Tween<T> : CustomYieldWithValue<T>
 {
     public T StartValue;
     public T TargetValue;
@@ -15,6 +17,8 @@ public abstract class Tween<T>
     }
 
     public abstract T Sample(double time);
+    public T SampleNormalized(double time) => Sample(time/Duration);
+    protected override T GetSampleFromTime(double time) => SampleNormalized(time);
 }
 
 public class FloatTween : Tween<float>

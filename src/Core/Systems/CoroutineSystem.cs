@@ -17,8 +17,8 @@ public class CoroutineSystem : DSystem, IUpdateSystem
     {
         CommandBuffer cb = new(Engine.ECSWorld);
         Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref ActiveState active, ref EntityID eID, ref CoroutineComponent cc) =>  {
-            if(!active.Active){return;}
             var managedEntity = Engine.GetEntity(eID.ID) as Coroutine;
+            bool isPaused = !active.Active;
             // Ensure the stack is initialized
             if (cc.ExecutionStack == null)
             {
@@ -29,7 +29,14 @@ public class CoroutineSystem : DSystem, IUpdateSystem
             if (cc.ExecutionStack.Count > 0)
             {
                 var currentCoroutine = cc.ExecutionStack.Peek();
-                if (!currentCoroutine.MoveNext())
+
+                // If it's a CustomYieldInstruction, update its pause state
+                if (currentCoroutine.Current is CustomYieldInstruction customYield)
+                {
+                    customYield.Paused = isPaused;
+                }
+
+                if (!isPaused && !currentCoroutine.MoveNext())
                 {
                     cc.ExecutionStack.Pop(); // Finished, so remove it
                     if (cc.ExecutionStack.Count > 0)
@@ -41,7 +48,7 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     Console.WriteLine("DESTROYING COROUTINE " + cc.CoroutineName);
                     cb.Add(in e, new Destroy());
                 }
-                else
+                else if(!isPaused)
                 {
                     // Handle yield return of another IEnumerator
                     var currentYield = currentCoroutine.Current;
@@ -54,9 +61,9 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     {
                         cc.ExecutionStack.Push(nestedCoroutine);
                     }
-                    else if (currentYield is CustomYieldInstruction customYield)
+                    else if (currentYield is CustomYieldInstruction newCustomYield)
                     {
-                        cc.ExecutionStack.Push(customYield.Wait());
+                        cc.ExecutionStack.Push(newCustomYield.Wait());
                     }
                 }
             }
