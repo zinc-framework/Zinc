@@ -8,6 +8,11 @@ using Zinc.Internal.STB;
 
 namespace Zinc;
 
+public record Tag(string Value)
+{
+    public static implicit operator Tag(string value) => new(value);
+}
+
 [Component<EntityID>]
 [Component<AdditionalEntityInfo>]
 [Component<ActiveState>]
@@ -15,6 +20,7 @@ public partial class Entity
 {
     public Arch.Core.EntityReference ECSEntityReference;
     public Arch.Core.Entity ECSEntity => ECSEntityReference.Entity;
+    public HashSet<Tag> Tags = new();
     public Entity(bool startEnabled)
     {
         ECSEntityReference = Engine.ECSWorld.Reference(CreateECSEntity(Engine.ECSWorld));
@@ -23,6 +29,32 @@ public partial class Entity
         Engine.EntityLookup.Add(ID, this);
         Active = startEnabled;
     }
+
+    public bool HasTag<T>() => Tags.Any(t => t is T);
+    public bool GetTag<T>(out T tag)
+    {
+        foreach (var item in Tags)
+        {
+            if(item is T t)
+            {
+                tag = t;
+                return true;
+            }
+        }
+        tag = default!;
+        return false;
+    }
+    public bool GetTags<T>(out List<T> tags)
+    {
+        tags = Tags.OfType<T>().ToList();
+        return tags.Count > 0;
+    }
+    public bool Tagged(Tag tag) => Tags.Contains(tag);
+    public bool Tagged(params Tag[] tags) => tags.All(Tags.Contains);
+    public void Tag(Tag tag) => Tags.Add(tag);
+    public void Tag(params Tag[] tags) => Tags.UnionWith(tags);
+    public void Untag(Tag tag) => Tags.Remove(tag);
+    public void Untag(params Tag[] tags) => Tags.ExceptWith(tags);
     public bool StagedForDestruction => ECSEntity.Has<Destroy>();
     public void Destroy()
     {
