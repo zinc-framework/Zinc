@@ -73,7 +73,8 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
             {
                 var target = e1IsCursor ? e2 : e1;
                 var managedtarget = e1IsCursor ? entity2 : entity1;
-                foreach (var me in mouseEvents)
+                //we sort these events here by the enum value to ensure priority for callbacks
+                foreach (var me in mouseEvents.OrderBy(x => x.mouseState))
                 {
                     switch (me.mouseState)
                     {
@@ -131,12 +132,13 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         //run collision checks to find candiates for new collision events and add them to a buffer
         Engine.ECSWorld.Query(in activeColliders, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref Position p, ref Collider c) =>
         {
+
             if(!c.Active || !a.Active){return;}
             //this checks for collisions between all active colliders
             //could be optimized to only check against colliders in the same scene / layer / etc
             for (int i = 0; i < colliders.Count; i++)
             {
-                if (e.Id != colliders[i].e.Id  && Zinc.Collision.CheckCollision(managedID.ID,colliders[i].c,colliders[i].managedID,colliders[i].c))
+                if (e.Id != colliders[i].e.Id  && Zinc.Collision.CheckCollision(managedID.ID,c,colliders[i].managedID,colliders[i].c))
                 {
                     entity1 =  Engine.GetEntity(managedID.ID);
                     entity2 =  Engine.GetEntity(colliders[i].managedID);

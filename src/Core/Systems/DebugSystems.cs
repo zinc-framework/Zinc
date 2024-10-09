@@ -16,16 +16,16 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
     QueryDescription colliderDebug = new QueryDescription().WithAll<ActiveState,Collider,Position,EntityID,AdditionalEntityInfo>();
     float colliderTick = 0.1f;
     float acc = 0f;
-    float radius = 64f;
     public void Update(double dt)
     {
         acc += (float)dt;
+
         Engine.ECSWorld.Query(in entityPosition,
             (Arch.Core.Entity e, ref Position p, ref ActiveState a, ref EntityID o, ref AdditionalEntityInfo info) =>
             {
                 if(!a.Active){return;}
                 var activeEntity = Engine.GetEntity(o.ID);
-                if(activeEntity == Engine.Cursor){return;}
+                if(activeEntity == Engine.Cursor || activeEntity is TemporaryShape){return;}
                 if(activeEntity is Anchor anchor)
                 {
                     anchor.GetWorldTransform().transform.Decompose(out var winPos, out var rot, out var scale);
@@ -46,58 +46,40 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                 }
             });
 
-        // Engine.ECSWorld.Query(in colliderDebug,
-        //     (Arch.Core.Entity e, ref Position p, ref ActiveState a, ref Collider c, ref EntityID o, ref AdditionalEntityInfo info) =>
-        //     {
-        //         if(!a.Active){return;}
-        //         var activeEntity = Engine.GetEntity(o.ID);
-        //         if(activeEntity == Engine.Cursor){return;}
-        //         var bounds = Utils.GetBounds(o.ID,c);
-        //         float minX = Single.MaxValue, minY = Single.MaxValue, maxX = 0, maxY = 0;
+        if (Engine.drawDebugColliders)
+        {
+            Engine.ECSWorld.Query(in colliderDebug,
+                (Arch.Core.Entity e, ref Position p, ref ActiveState a, ref Collider c, ref EntityID o, ref AdditionalEntityInfo info) =>
+                {
+                    if(!a.Active){return;}
+                    var activeEntity = Engine.GetEntity(o.ID);
+                    if(activeEntity == Engine.Cursor || activeEntity is TemporaryShape){return;}
 
-        //         if(acc > colliderTick)
-        //         {
-        //             foreach (var b in bounds)
-        //             {
-        //                 new TemporaryShape(colliderTick,4,4,Palettes.ENDESGA[8]){X = b.X,Y = b.Y, RenderOrder = -1};
-        //                 // minX = b.X < minX ? b.X : minX;
-        //                 // minY = b.Y < minY ? b.Y : minY;
-                        
-        //                 // maxX = b.X > maxX ? b.X : maxX;
-        //                 // maxY = b.Y > maxY ? b.Y : maxY;
-        //             }
-        //         }
+                    var bounds = Utils.GetBounds(o.ID,c);
+                    if(activeEntity is Anchor anchor)
+                    {
+                        anchor.GetWorldTransform().transform.Decompose(out var winPos, out var rot, out var scale);
+                        if(acc > colliderTick)
+                        {
+                            foreach (var corner in bounds)
+                            {
+                                new TemporaryShape(colliderTick,4,4,color:Palettes.ENDESGA[12]){X = corner.X,Y = corner.Y,Collider_Active=false,RenderOrder=-1};
+                            }
+                        }
+                        var db = info.DebugText;
+                        // draw with imgui but idk tbh, the temp entity works pretty well
+                        // ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
+                        // ImGUIHelper.Wrappers.Window($"{anchor.ID}", winPos - new Vector2(100,100), new Vector2(500,500), () => {
+                        //     // ImGUIHelper.Wrappers.Text($"test");
+                        //     ImGUIHelper.Wrappers.DrawQuad(bounds);
+                        // },condition:ImGuiCond_.ImGuiCond_Always,flags:ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_.ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_.ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_.ImGuiWindowFlags_NoMove | ImGuiWindowFlags_.ImGuiWindowFlags_NoResize | ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
+                    }
+                });
+        }
 
-        //         if(Engine.GetEntity(o.ID) is Anchor anchor)
-        //         {
-        //             //cute scaling but kind of bad without state
-        //             // ImGUIHelper.Wrappers.SetNextWindowPosition(new(minX, minY));
-        //             // ImGUIHelper.Wrappers.SetNextWindowSize(maxX-minX, maxY-minY);
-        //             anchor.GetWorldTransform().transform.Decompose(out var winPos, out var rot, out var scale);
-        //             ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(winPos.X,winPos.Y));
-        //             ImGUIHelper.Wrappers.SetNextWindowSize(100,100);
-        //             ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
-        //             ImGUIHelper.Wrappers.Begin($"{anchor.ID}", 
-        //                 ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar | 
-        //                 ImGuiWindowFlags_.ImGuiWindowFlags_NoMouseInputs |
-        //                 ImGuiWindowFlags_.ImGuiWindowFlags_NoMove |
-        //                 ImGuiWindowFlags_.ImGuiWindowFlags_NoResize |
-        //                 ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
-        //             ImGUIHelper.Wrappers.Text($"{anchor.Name}\n{anchor.ID}\n{winPos.X},{winPos.Y}\n{info.DebugText}");
-        //             if (Engine.drawDebugColliders)
-        //             {
-        //                 ImGUIHelper.Wrappers.DrawQuad(bounds);
-        //             }
-        //             ImGUIHelper.Wrappers.DrawQuad([new Vector2(0,0),new Vector2(16,0),new Vector2(16,16),new Vector2(0,16)]);
-        //             ImGUIHelper.Wrappers.End();
-
-        //         }
-        //     });
-
-        //     if(acc > colliderTick)
-        //     {
-        //         acc = 0;
-        //     }
-        // }
+        if(acc > colliderTick)
+        {
+            acc = 0f;
+        }
     }
 }
