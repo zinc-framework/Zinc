@@ -6,7 +6,7 @@ namespace Zinc;
 public class InputSystem : DSystem, IUpdateSystem
 {
     QueryDescription frameEvents = new QueryDescription().WithAll<EventMeta, FrameEvent>(); // Should have all specified components
-    public enum MouseState
+    public enum MouseState //NOTE THE ORDER HERE MATTERS - THIS IS THE PRIORITY WHERE LOWEST IS HIGHEST PRIORTY
     {
         Up,
         Pressed,
@@ -109,10 +109,6 @@ public class InputSystem : DSystem, IUpdateSystem
                                 new EventMeta("MOUSE_PRESSED"),
                                 new MouseEvent(MouseState.Pressed,downButton,FrameModifiers));
                         }
-                        Events.Mouse.Down?.Invoke(FrameModifiers);
-                        Engine.ECSWorld.Create(
-                            new EventMeta("MOUSE_DOWN"),
-                            new MouseEvent(MouseState.Down,downButton,FrameModifiers));
                         break;
                     case sapp_event_type.SAPP_EVENTTYPE_MOUSE_UP:
                         
@@ -196,6 +192,29 @@ public class InputSystem : DSystem, IUpdateSystem
             em.dirty = true;
             }
         });
+
+        if(!lmb_up || !rmb_up || !mmb_up)
+        {
+            Events.Mouse.Down?.Invoke(FrameModifiers);
+            if(!lmb_up)
+            {
+                Engine.ECSWorld.Create(
+                    new EventMeta("MOUSE_DOWN"),
+                    new MouseEvent(MouseState.Down,MouseButton.LEFT,FrameModifiers));
+            }
+            if(!rmb_up)
+            {
+                Engine.ECSWorld.Create(
+                    new EventMeta("MOUSE_DOWN"),
+                    new MouseEvent(MouseState.Down,MouseButton.RIGHT,FrameModifiers));
+            }
+            if(!mmb_up)
+            {
+                Engine.ECSWorld.Create(
+                    new EventMeta("MOUSE_DOWN"),
+                    new MouseEvent(MouseState.Down,MouseButton.MIDDLE,FrameModifiers));
+            }
+        }
     }
     
     List<Modifiers> GetModifier(uint v)
