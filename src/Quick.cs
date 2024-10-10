@@ -4,6 +4,7 @@ using Arch.Core;
 using Zinc.Core;
 using Zinc.Core.ImGUI;
 using Zinc.Internal.Sokol;
+using System.Collections;
 
 namespace Zinc;
 
@@ -55,6 +56,20 @@ public static class Quick
         e.X = InputSystem.MouseX;
         e.Y = InputSystem.MouseY;
     }
+
+    public static Coroutine Loop(float time, Action action, string name = "loop")
+    {
+        return new Coroutine(innerLoop(),name);
+        IEnumerator innerLoop()
+        {
+            while (true)
+            {
+                action.Invoke();
+                yield return new WaitForSeconds(time);
+            }
+        }
+    }
+
 
     public static Vector2 RandUnitCirclePos()
     {
