@@ -50,7 +50,29 @@ public partial class Entity
         return tags.Count > 0;
     }
     public bool Tagged(Tag tag) => Tags.Contains(tag);
-    public bool Tagged(params Tag[] tags) => tags.All(Tags.Contains);
+    public bool Tagged(params Tag[] tags)
+    {
+        foreach (var tag in tags)
+        {
+            if(!Tags.Contains(tag))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    public bool NotTagged(Tag tag) => !Tags.Contains(tag);
+    public bool NotTagged(params Tag[] tags)
+    {
+        foreach (var tag in tags)
+        {
+            if (Tags.Contains(tag))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
     public void Tag(Tag tag) => Tags.Add(tag);
     public void Tag(params Tag[] tags) => Tags.UnionWith(tags);
     public void Untag(Tag tag) => Tags.Remove(tag);
