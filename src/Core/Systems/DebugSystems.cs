@@ -1,11 +1,7 @@
-using System.Collections;
-using System.Diagnostics;
 using System.Numerics;
-using Arch.CommandBuffer;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Zinc.Core;
-using Zinc.Core.ImGUI;
+using static Zinc.Core.ImGUI;
 using Zinc.Internal.Sokol;
 
 namespace Zinc;
@@ -29,19 +25,19 @@ public class DebugOverlaySystem : DSystem, IUpdateSystem
                 if(activeEntity is Anchor anchor)
                 {
                     anchor.GetWorldTransform().transform.Decompose(out var winPos, out var rot, out var scale);
-                    ImGUIHelper.Wrappers.SetNextWindowPosition(new Vector2(winPos.X-8,winPos.Y-8));
-                    ImGUIHelper.Wrappers.SetNextWindowSize(200,20);
-                    ImGUIHelper.Wrappers.SetNextWindowBGAlpha(0f);
-                    ImGUIHelper.Wrappers.Begin($"{anchor.ID}", 
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar | 
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoBackground | 
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoMouseInputs |
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoMove |
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoResize |
-                        ImGuiWindowFlags_.ImGuiWindowFlags_NoBringToFrontOnFocus);
-                    ImGUIHelper.Wrappers.Text($"{anchor.Name}");
-                    ImGUIHelper.Wrappers.DrawCircle(winPos,2);
-                    ImGUIHelper.Wrappers.End();
+                    SetNextWindowPosition(new Vector2(winPos.X-8, winPos.Y-8));
+                    SetNextWindowSize(200,20);
+                    SetNextWindowBGAlpha(0f);
+                    Begin($"{anchor.ID}",
+                        WindowFlags.NoTitleBar |
+                        WindowFlags.NoBackground |
+                        WindowFlags.NoMouseInputs |
+                        WindowFlags.NoMove |
+                        WindowFlags.NoResize |
+                        WindowFlags.NoBringToFrontOnFocus);
+                    Text($"{anchor.Name}");
+                    DrawCircle(winPos, 2);
+                    End();
 
                 }
             });

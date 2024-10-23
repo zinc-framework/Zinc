@@ -14,7 +14,7 @@ public partial class Shape : SceneEntity
     {
         Renderer_Pivot = new System.Numerics.Vector2(0.5f);
         Collider_Pivot = new System.Numerics.Vector2(0.5f);
-        Renderer_Color = color ?? Palettes.ENDESGA[9];
+        Renderer_Color = color ?? Palettes.GetRandomColor();
         Renderer_Width = width;
         Renderer_Height = height;
         Collider_Width = width;

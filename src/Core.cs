@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Zinc.Internal.STB;
 using Arch.Core;
 using Zinc.Core;
-using Zinc.Core.ImGUI;
 using FontStashSharp;
 using Utils = Zinc.NativeInterop.Utils;
 
@@ -372,6 +371,7 @@ public static partial class Engine
         Cursor = new() { Name = "Cursor" };
 
         Events.SceneUnmounted += OnSceneUnmounted;
+        Palettes.SetActivePalette(Palettes.ENDESGA);
         Setup?.Invoke();
     }
 
@@ -416,35 +416,35 @@ public static partial class Engine
         imgui_frame.dpi_scale = App.dpi_scale();
         ImGUI.new_frame(&imgui_frame);
 
-        ImGUIHelper.Wrappers.BeginMainMenuBar();
-        if (ImGUIHelper.Wrappers.BeginMenu("Dinghy"))
+        Core.ImGUI.BeginMainMenuBar();
+        if (Core.ImGUI.BeginMenu("Dinghy"))
         {
-            ImGUIHelper.Wrappers.Checkbox("Show Stats", ref showStats);
-            ImGUIHelper.Wrappers.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
-            ImGUIHelper.Wrappers.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
-            ImGUIHelper.Wrappers.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
+            Core.ImGUI.Checkbox("Show Stats", ref showStats);
+            Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
+            Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
+            Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
             foreach (var i in MountedScenes)
             {
                 var scene = SceneLookup[i.Key];
-                ImGUIHelper.Wrappers.Text($"{scene.Name} {scene.Status}");
+                Core.ImGUI.Text($"{scene.Name} {scene.Status}");
             }
-            ImGUIHelper.Wrappers.EndMenu();
+            Core.ImGUI.EndMenu();
         }
         
-        if (ImGUIHelper.Wrappers.BeginMenu("Sokol"))
+        if (Core.ImGUI.BeginMenu("Sokol"))
         {
-            ImGUIHelper.Wrappers.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
-            ImGUIHelper.Wrappers.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
-            ImGUIHelper.Wrappers.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
-            ImGUIHelper.Wrappers.Checkbox("Images", ref gfx_dbgui.images.open);
-            ImGUIHelper.Wrappers.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
-            ImGUIHelper.Wrappers.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
-            ImGUIHelper.Wrappers.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
-            ImGUIHelper.Wrappers.Checkbox("Passes", ref gfx_dbgui.passes.open);
-            ImGUIHelper.Wrappers.Checkbox("Capture", ref gfx_dbgui.capture.open);
-            ImGUIHelper.Wrappers.EndMenu();
+            Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
+            Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
+            Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
+            Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
+            Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
+            Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
+            Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
+            Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
+            Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
+            Core.ImGUI.EndMenu();
         }
-        ImGUIHelper.Wrappers.EndMainMenuBar();
+        Core.ImGUI.EndMainMenuBar();
         
         if (showStats)
         {
@@ -453,7 +453,7 @@ public static partial class Engine
             {
                 ec += l.Count;
             }
-            ImGUIHelper.Wrappers.ShowStats($"{t}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
+            Core.ImGUI.ShowStats($"{t}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
         }
 
         fixed (bool* dem_ptr = &showIMGUIDemo)
