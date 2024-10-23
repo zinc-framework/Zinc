@@ -31,6 +31,7 @@ public partial class Entity
     }
 
     public bool HasTag<T>() => Tags.Any(t => t is T);
+    public bool HasTag(Tag tag) => Tags.Any(t => t == tag);
     public bool GetTag<T>(out T tag)
     {
         foreach (var item in Tags)
