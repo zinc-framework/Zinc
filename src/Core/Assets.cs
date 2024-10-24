@@ -13,11 +13,12 @@ public static partial class Assets
         {
             return new Sprite(ToSpriteData(r),scene,startEnabled);
         }
-
         public SpriteData ToSpriteData(Rect? r = null)
         {
             Texture.Load();
             return new SpriteData(Texture,r != null ? (Rect)r : Texture.GetFullRect());
         }
+
+        public static implicit operator Resources.Texture(TextureAsset a) => a.Texture;
     }
 }
