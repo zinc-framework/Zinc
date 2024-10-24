@@ -28,4 +28,17 @@ public partial class AnimatedSprite : Sprite
             Update = _updateWrapper;
         }
     }
+
+    public void SetAnimation(string name)
+    {
+        var anim = Animations.First(x => x.Name == name);
+        if (anim != null)
+        {
+            CurrentAnimation = anim;
+        }
+        else
+        {
+            Console.WriteLine($"anim {name} not found");
+        }
+    }
 }
