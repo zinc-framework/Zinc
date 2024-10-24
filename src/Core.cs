@@ -417,33 +417,31 @@ public static partial class Engine
         ImGUI.new_frame(&imgui_frame);
 
         Core.ImGUI.BeginMainMenuBar();
-        if (Core.ImGUI.BeginMenu("Dinghy"))
+        if (Core.ImGUI.BeginMenu("Zinc"))
         {
             Core.ImGUI.Checkbox("Show Stats", ref showStats);
             Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
             Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
             Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
-            foreach (var i in MountedScenes)
+            
+            if (Core.ImGUI.BeginMenu("Sokol"))
             {
-                var scene = SceneLookup[i.Key];
-                Core.ImGUI.Text($"{scene.Name} {scene.Status}");
+                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
+                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
+                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
+                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
+                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
+                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
+                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
+                Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
+                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
+                Core.ImGUI.EndMenu();
             }
+
             Core.ImGUI.EndMenu();
+
         }
         
-        if (Core.ImGUI.BeginMenu("Sokol"))
-        {
-            Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
-            Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
-            Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
-            Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
-            Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
-            Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
-            Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
-            Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
-            Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
-            Core.ImGUI.EndMenu();
-        }
         Core.ImGUI.EndMainMenuBar();
         
         if (showStats)

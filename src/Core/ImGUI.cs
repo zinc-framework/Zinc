@@ -339,10 +339,16 @@ public static class ImGUI
         Internal.Sokol.ImGUI.igSetNextWindowViewport(viewport->ID);
         window_flags |= WindowFlags.NoMove;
         Internal.Sokol.ImGUI.igSetNextWindowBgAlpha(0.35f);
-        Begin("Dinghy Stats",window_flags);
+        Begin("Zinc Stats",window_flags);
         Text(frameRate);
         Text(entities);
         Text(mouse);
+        Text("Loaded Scenes:");
+        foreach (var i in Engine.MountedScenes)
+        {
+            var scene = Engine.SceneLookup[i.Key];
+            Text($"{scene.Name} {scene.Status}");
+        }
         End();
     }
 }
