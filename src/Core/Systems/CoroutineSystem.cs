@@ -1,17 +1,18 @@
 using System.Collections;
 using Arch.CommandBuffer;
 using Arch.Core;
+using Arch.Core.Extensions;
 
 namespace Zinc;
 
 public class CoroutineSystem : DSystem, IUpdateSystem
 {
     QueryDescription coroutine = new QueryDescription().WithAll<EntityID,CoroutineComponent,ActiveState>().WithNone<Destroy>();
+    List<Zinc.Entity> completedCoroutines = new();
     public void Update(double dt)
     {
-        CommandBuffer cb = new(Engine.ECSWorld);
+        completedCoroutines.Clear();
         Engine.ECSWorld.Query(in coroutine, (Arch.Core.Entity e, ref ActiveState active, ref EntityID eID, ref CoroutineComponent cc) =>  {
-            var managedEntity = Engine.GetEntity(eID.ID) as Coroutine;
             bool isPaused = !active.Active;
             // Ensure the stack is initialized
             if (cc.ExecutionStack == null)
@@ -39,8 +40,8 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     }
                     // Otherwise, this was the last coroutine
                     cc.CompletionCallback?.Invoke();
-                    Console.WriteLine("DESTROYING COROUTINE " + cc.CoroutineName);
-                    cb.Add(in e, new Destroy());
+                    Console.WriteLine($"DESTROYING COROUTINE[{eID.ID}]: " + cc.CoroutineName);
+                    completedCoroutines.Add(Engine.GetEntity(eID.ID));
                 }
                 else if(!isPaused)
                 {
@@ -62,6 +63,9 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                 }
             }
         });
-        cb.Playback();
+        foreach (var item in completedCoroutines)
+        {
+            item.Destroy();
+        }
     }
 }
