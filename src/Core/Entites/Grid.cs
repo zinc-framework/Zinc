@@ -1,4 +1,5 @@
 using System.Numerics;
+using Arch.Core.Extensions;
 
 namespace Zinc;
 
@@ -22,4 +23,6 @@ public partial class Grid : SceneEntity
             Update = _updateWrapper;
         }
     }
+
+    public void GetLocalGridPosition(int index, out float x, out float y) => ECSEntity.Get<GridComponent>().GetGridPosition(index, out x, out y);
 }

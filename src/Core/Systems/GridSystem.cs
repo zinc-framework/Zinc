@@ -12,13 +12,15 @@ public class GridSystem : DSystem, IPreUpdateSystem
             if(!a.Active){return;}
             var grid = Engine.GetEntity(managedID.ID) as Grid;
             var children = grid.GetChildren();
-            var startX = - gc.GridWidth * gc.GridPivot.X;
-            var startY = - gc.GridHeight * gc.GridPivot.Y;
+            // var startX = - gc.GridWidth * gc.GridPivot.X;
+            // var startY = - gc.GridHeight * gc.GridPivot.Y;
             for (int i = 0; i < children.Count; i++)
             {
                 grid.ECSEntity.Get<GridComponent>().GetGridPosition(i, out var x, out var y);
-                children[i].X = startX + x;
-                children[i].Y = startY + y;
+                // children[i].X = startX + x;
+                // children[i].Y = startY + y;
+                children[i].X = x;
+                children[i].Y = y;
             }
         });
     }
