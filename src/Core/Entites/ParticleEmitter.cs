@@ -2,27 +2,21 @@
 
 namespace Zinc;
 
-public partial class ParticleEmitter : Entity
+[Component<RenderItem>]
+[Component<ParticleEmitterComponent>("Emitter")]
+public partial class ParticleEmitter : SceneEntity
 {
-    public ParticleEmitterComponent.EmitterConfig Config;
-    public ParticleEmitter(ParticleEmitterComponent.EmitterConfig config, Scene? scene = null, bool startEnabled = true) : base(startEnabled,scene)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public ParticleEmitter(int maxParticles, ParticleEmitterConfig? config = null, Scene? scene = null, bool startEnabled = true, Action<ParticleEmitter,double>? update = null, Anchor? parent = null, List<Anchor>? children = null) 
+        : base(startEnabled,scene,parent:parent,children:children)
     {
-        Config = config;
-        sceneRenderOrder = Scene.GetNextSceneRenderCounter();
-        ECSEntity.Add(
-            new RenderItem(sceneRenderOrder),
-            new ParticleEmitterComponent(config));
-    }
-    
-    private int sceneRenderOrder;
-    public int SceneRenderOrder
-    {
-        get => sceneRenderOrder;
-        set
+        RenderOrder = Scene.GetNextSceneRenderCounter();
+        ECSEntity.Set(new ParticleEmitterComponent(maxParticles,config));
+
+        if (update != null && _updateWrapper == null)
         {
-            ref var r = ref ECSEntity.Get<RenderItem>();
-            r.RenderOrder = value;
-            sceneRenderOrder = value;
+            _updateWrapper = (baseEntity, dt) => update((ParticleEmitter)baseEntity, dt);
+            Update = _updateWrapper;
         }
     }
 }

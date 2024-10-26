@@ -3,6 +3,15 @@ namespace Zinc;
 //https://lospec.com/palette-list
 public static class Palettes
 {
+    public static List<uint> ActivePalette;
+    public static void SetActivePalette(List<uint> palette)
+    {
+        ActivePalette = palette;
+    }
+    public static uint GetRandomColor()
+    {
+        return ActivePalette[Quick.Random.Next(ActivePalette.Count)];
+    }
     //RGBA
     //could source gen this instead to sg_color from included lospec hex files?
     public static readonly List<uint> ENDESGA = new()

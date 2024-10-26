@@ -2,10 +2,22 @@
 
 namespace Zinc;
 
+[Component<Position>]
+[Component<Collider>("Collider")]
+[Component<UpdateListener>]
 public partial class Pointer : Entity
 {
-    public Pointer(bool startEnabled = true) : base(startEnabled,null,false)
+    private readonly Action<Entity, double>? _updateWrapper;
+    public Pointer(bool startEnabled = true, Action<Pointer, double>? update = null) : base(startEnabled)
     {
-        ECSEntity.Add(new Collider(0,0,1,1,Active:true));
+        Collider_Pivot = new System.Numerics.Vector2(0.5f);
+        Collider_Width = 1;
+        Collider_Height = 1;
+        Collider_Active = true;
+        if (update != null)
+        {
+            _updateWrapper = (baseEntity, dt) => update((Pointer)baseEntity, dt);
+            Update = _updateWrapper;
+        }
     }
 }

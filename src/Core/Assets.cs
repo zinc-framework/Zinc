@@ -9,10 +9,16 @@ public static partial class Assets
         public Resources.Texture Texture = new (Path,loadImmediate:false);
         public void Load(bool forceReload = false) => Texture.Load(forceReload);
         //public Rect R = ... - maybe someway of predeclaring Rects with meta?
-        public Sprite CreateSprite(Rect? r = null, Scene? scene = null, bool startEnabled = true)
+        public Sprite ToSprite(Rect? r = null, Scene? scene = null, bool startEnabled = true)
+        {
+            return new Sprite(ToSpriteData(r),scene,startEnabled);
+        }
+        public SpriteData ToSpriteData(Rect? r = null)
         {
             Texture.Load();
-            return new Sprite(new SpriteData(Texture,r != null ? (Rect)r : Texture.GetFullRect()),scene,startEnabled);
+            return new SpriteData(Texture,r != null ? (Rect)r : Texture.GetFullRect());
         }
+
+        public static implicit operator Resources.Texture(TextureAsset a) => a.Texture;
     }
 }

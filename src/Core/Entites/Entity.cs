@@ -1,192 +1,235 @@
 using System.Numerics;
 using Arch.Core.Extensions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Zinc.Core;
 using Zinc.Internal.Cute;
 using Zinc.Internal.Sokol;
 using Zinc.Internal.STB;
-using Volatile;
 
 namespace Zinc;
 
-public class Entity
+public record Tag(string Value)
 {
-    public int ID;
-    public string Name { get; set; } = "entity";
-    public string DebugText = "";
-    // public bool DestoryOnLoad = true;
-    private float x = 0;
-    public float X
-    {
-        get => x;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.x = value;
-            x = value;
-        }
-    }
-    
-    private bool active = true;
-    public bool Active
-    {
-        get => active;
-        set
-        {
-            ref var a = ref ECSEntity.Get<Active>();
-            a.active = value;
-            active = value;
-        }
-    }
+    public static implicit operator Tag(string value) => new(value);
+}
 
-    private float y = 0;
-    public float Y
-    {
-        get => y;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.y = value;
-            y = value;
-        }
-    }
-    
-    //NOTE: maybe get rid of rotation/scale/pivot for an entity specifically?
-    //they are more about component things instead of intrinsic entity things
-    
-    //also make physics and actual system to get rid of the jank setters
-    private float scaleY = 1;
-    public float ScaleY
-    {
-        get => scaleY;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.scaleY = value;
-            scaleY = value;
-        }
-    }
-    
-    private float scaleX = 1;
-    public float ScaleX
-    {
-        get => scaleX;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.scaleX = value;
-            scaleX = value;
-        }
-    }
-    
-    private float rotation = 0;
-    public float Rotation
-    {
-        get => rotation;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.rotation = value;
-            rotation = value;
-        }
-    }
-    
-    private float pivotX = 0;
-    public float PivotX
-    {
-        get => pivotX;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.pivotX = value;
-            pivotX = value;
-        }
-    }
-    
-    private float pivotY = 0;
-    public float PivotY
-    {
-        get => pivotY;
-        set
-        {
-            ref var pos = ref ECSEntity.Get<Position>();
-            pos.pivotY = value;
-            pivotY = value;
-        }
-    }
-
-
-    public void SetPositionRaw(float x, float y, float rotation, float scaleX, float scaleY, float pivotX, float pivotY)
-    {
-        this.x = x;
-        this.y = y;
-        this.scaleX = scaleX;
-        this.scaleY = scaleY;
-        this.rotation = rotation;
-        this.pivotX = pivotX;
-        this.pivotY = pivotY;
-    }
-
-    public void SetPosition(float x, float y, float rotation, float scaleX, float scaleY, float pivotX, float pivotY)
-    {
-        ref var pos = ref ECSEntity.Get<Position>();
-        pos.x = x;
-        pos.y = y;
-        pos.scaleY = scaleY;
-        pos.scaleX = scaleX;
-        pos.rotation = rotation;
-        pos.pivotX = pivotX;
-        pos.pivotY = pivotY;
-        SetPositionRaw(x,y,rotation,scaleX,scaleY,pivotX,pivotY);
-    }
-    
+[Component<EntityID>]
+[Component<AdditionalEntityInfo>]
+[Component<ActiveState>]
+public partial class Entity
+{
     public Arch.Core.EntityReference ECSEntityReference;
     public Arch.Core.Entity ECSEntity => ECSEntityReference.Entity;
-    public Scene? Scene;
-    public Entity(bool startEnabled, Scene scene, bool addToSceneHeirarchy = true, Action<Entity,double> update = null)
+    public HashSet<Tag> Tags = new();
+    public Entity(bool startEnabled)
     {
+        ECSEntityReference = Engine.ECSWorld.Reference(CreateECSEntity(Engine.ECSWorld));
+        AssignDefaultValues();
         ID = Engine.GetNextEntityID();
-        Scene = scene != null ? scene : Engine.TargetScene;
-        Arch.Core.Entity e = addToSceneHeirarchy
-            //in-scene entity
-            ? Engine.ECSWorld.Create(
-                new Active(startEnabled),
-                new HasManagedOwner(this),
-                new Position(X, Y),
-                new UpdateListener(this, update),
-                new SceneMember(Scene.ID)
-            )
-            //non-in-scene entity
-            : Engine.ECSWorld.Create(
-                new Active(startEnabled),
-                new HasManagedOwner(this),
-                new Position(X, Y),
-                new UpdateListener(this, update));
-        ECSEntityReference = Engine.ECSWorld.Reference(e);
-        Engine.ECSWorld.Add<Entity>(ECSEntity);
-        if (addToSceneHeirarchy)
-        {
-            Engine.SceneEntityMap[Scene].Add(this);
-        }
-        AddAttributeComponents();
+        Engine.EntityLookup.Add(ID, this);
+        Active = startEnabled;
     }
 
-    //this is populated automatically by the inheriting class and the components it declares in its attributes
-    protected virtual void AddAttributeComponents()
+    public bool GetTags<T>(out List<T> tags)
     {
-
+        tags = new List<T>();
+        if(Tags.OfType<T>().Count() > 0)
+        {
+            tags = Tags.OfType<T>().ToList();
+            return true;
+        }
+        return false;
     }
-    
+    public bool Tagged<T>() => Tags.Any(t => t is T);
+    public bool Tagged(Tag tag) => Tags.Contains(tag);
+    public bool Tagged(params Tag[] tags)
+    {
+        foreach (var tag in tags)
+        {
+            if(!Tags.Contains(tag))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    public bool NotTagged(params Tag[] tags)
+    {
+        foreach (var tag in tags)
+        {
+            if (Tags.Contains(tag))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    public void Tag(Tag tag) => Tags.Add(tag);
+    public void Tag(params Tag[] tags) => Tags.UnionWith(tags);
+    public void Untag(Tag tag) => Tags.Remove(tag);
+    public void Untag(params Tag[] tags) => Tags.ExceptWith(tags);
+    public bool StagedForDestruction => ECSEntity.Has<Destroy>();
     public void Destroy()
     {
-        if (!ECSEntity.Has<Destroy>())
+        OnDestroy();
+        ECSEntity.Add<Destroy>();
+    }
+    protected virtual void OnDestroy() {}
+}
+
+/// <summary>
+/// A SceneObject is something that is associated with a scene
+/// </summary>
+[Component<SceneMember>]
+public partial class SceneObject : Entity
+{
+    public Scene Scene => Engine.SceneLookup[SceneID];
+    public SceneObject(bool startEnabled, Scene? scene = null) 
+        : base(startEnabled)
+    {
+        SceneID = scene != null ? scene.ID : Engine.TargetScene.ID;
+        Engine.SceneEntityMap[SceneID].Add(ID);
+    }
+    protected override void OnDestroy()
+    {
+        Engine.SceneEntityMap[SceneID].Remove(ID);
+    }
+}
+
+/// <summary>
+/// An anchor is a point in a scene
+/// </summary>
+[Component<Position>]
+public partial class Anchor : SceneObject
+{
+    public Anchor? Parent {get; private set; } = null;
+    private List<Anchor> children = new();
+    public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
+        : base(startEnabled,scene)
+    {
+        Anchor? targetParent = null;
+        if(!(this is Scene.SceneRootAnchor))
         {
-            ECSEntity.Add(new Destroy());
+            //we add ourselves to either the passed in parent or the root of the scene we are in
+            //only scene root anchors get a null parent
+            targetParent = parent != null ? parent : Engine.SceneLookup[SceneID];
+            targetParent.children.Add(this);
+        }
+        this.Parent = targetParent;
+
+        if(children != null)
+        {
+            foreach (var c in children)
+            {
+                AddChild(c);
+            }
         }
     }
 
-    public void DestroyImmediate()
+    /// <summary>
+    /// Gets the children of this anchor. 
+    /// </summary>
+    /// <returns>A copy of the list of children</returns>
+    public List<Anchor> GetChildren()
     {
-        Engine.SceneEntityMap[Scene].Remove(this);
-        Engine.ECSWorld.Destroy(ECSEntity);
+        return children;
+    }
+
+    public void SetParent(Anchor newParent)
+    {
+        Parent.children.Remove(this);
+        //TODO: figure out how to handle transfoms when changing parents
+        newParent.children.Add(this);
+        Parent = newParent;
+    }
+
+    public Anchor AddChild(Anchor child)
+    {
+        child.SetParent(this);
+        return child;
+    }
+
+    protected override void OnDestroy()
+    {
+        var currentChildren = new List<Anchor>(children);
+        foreach (var c in currentChildren)
+        {
+            c.Destroy();
+        }
+        if(Parent != null)
+        {
+            Parent.children.Remove(this);
+        }
+        base.OnDestroy();
+    }
+
+    public Position LocalPosition => ECSEntity.Get<Position>();
+    // original working with transforms not scaled
+    // public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
+    // {
+    //     var (localTransform, localScale) = LocalPosition.GetLocalTransform();
+
+    //     if (Parent != null)
+    //     {
+    //         var (parentTransform, parentScale) = Parent.GetWorldTransform();
+            
+    //         // Combine transforms and scales correctly
+    //         return (localTransform * parentTransform, 
+    //                 new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y));
+    //     }
+
+    //     return (localTransform, localScale);
+    // }
+
+    //working except for parent rotate due to scenerootachor
+    public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
+    {
+        var (localRotation, localTranslation, localScale) = LocalPosition.GetLocalTransform();
+
+        if (Parent != null && !(Parent is Scene.SceneRootAnchor))
+        {
+            var (parentTransform, parentScale) = Parent.GetWorldTransform();
+            
+            // Scale the local translation
+            Vector2 scaledTranslation = new Vector2(
+                localTranslation.X * parentScale.X,
+                localTranslation.Y * parentScale.Y
+            );
+
+            // Create a matrix for the scaled translation
+            Matrix3x2 scaledTranslationMatrix = Matrix3x2.CreateTranslation(scaledTranslation);
+
+            // Combine transforms: (ScaledTranslation * LocalRotation) * ParentTransform
+            Matrix3x2 worldTransform = (scaledTranslationMatrix * localRotation) * parentTransform;
+            
+            // Accumulate scale
+            Vector2 worldScale = new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y);
+
+            return (worldTransform, worldScale);
+        }
+
+        // If no parent, just combine local translation and rotation
+        Matrix3x2 localTransform = localRotation * Matrix3x2.CreateTranslation(localTranslation);
+        return (localTransform, localScale);
+    }
+
+    public Vector2 GetWorldPosition()
+    {
+        GetWorldTransform().transform.Decompose(out var translation, out var rotation, out var scale);
+        // var (transform, scale) = GetWorldTransform().transform.Decompose();
+        return translation;
+    }
+}
+
+
+[Component<UpdateListener>]
+public partial class SceneEntity : Anchor
+{
+    public SceneEntity(bool startEnabled, Scene? scene = null, Action<Entity, double>? update = null, Anchor? parent = null, List<Anchor>? children = null) 
+        : base(startEnabled, scene, parent,children)
+    {
+        X = Engine.Width/2f;
+        Y = Engine.Height/2f;
+        Update = update;
     }
 }

@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Zinc.Internal.STB;
 using Arch.Core;
 using Zinc.Core;
-using Zinc.Core.ImGUI;
 using FontStashSharp;
 using Utils = Zinc.NativeInterop.Utils;
 
@@ -42,7 +41,9 @@ public static partial class Engine
         new FrameAnimationSystem(),
         //update
         InputSystem,
-        new SceneSystem(),
+        new GridSystem(),
+        new SceneUpdateSystem(),
+        new TemporaryObjectSystem(),
         new CoroutineSystem(),
         new CollisionSystem(),
         new CollisionCallbackSystem(),
@@ -83,14 +84,14 @@ public static partial class Engine
     public static Scene TargetScene { get; private set; } = GlobalScene;
     public static void SetTargetScene(Scene s)
     {
-        if (s.MountStatus != Scene.SceneMountStatus.Mounted)
+        if (s.MountStatus != SceneMountStatus.Mounted)
         {
             Console.WriteLine("scene must be mounted to be target");
             return;
         }
-        if (s.LoadStatus != Scene.SceneLoadStatus.Loaded)
+        if (s.LoadStatus != SceneLoadStatus.Loaded)
         {
-            if (s.LoadStatus == Scene.SceneLoadStatus.Loading)
+            if (s.LoadStatus == SceneLoadStatus.Loading)
             {
                 Console.WriteLine("scene cant be target until loading finished");
             }
@@ -104,9 +105,30 @@ public static partial class Engine
         TargetScene = s;
     }
 
-    public static Dictionary<Scene, List<Entity>> SceneEntityMap = new();
-
-    public static Dictionary<int, Scene> MountedScenes = new();
+    /// <summary>
+    /// Key is the managed entity ID, value is the managed entity
+    /// </summary>
+    public static Dictionary<int, Entity> EntityLookup = new();
+    public static bool TryGetEntity(int id, out Entity e)
+    {
+        return EntityLookup.TryGetValue(id, out e);
+    }
+    public static Entity GetEntity(int id)
+    {
+        return EntityLookup[id];
+    }
+    /// <summary>
+    /// Key is the Scene ID, value is the Scene
+    /// </summary>
+    public static Dictionary<int, Scene> SceneLookup = new();
+    /// <summary>
+    /// Key is the Scene ID, value is the list of managed entity IDs
+    /// </summary>
+    public static Dictionary<int, List<int>> SceneEntityMap = new();
+    /// <summary>
+    /// Key is the ID of the Scene, value is the depth
+    /// </summary>
+    public static Dictionary<int, int> MountedScenes = new();
 
     public static List<(Scene scene,Action callback)> scenesStagedForUnmounting = new ();
     private static bool hasScenesStagedForUnmounting = false;
@@ -324,7 +346,6 @@ public static partial class Engine
         PhysicsWorld = new ();
         ECSWorld = World.Create();
         GlobalScene = new(){Name = "Global Scene"};
-        Cursor = new() { Name = "Cursor" };
 
         
         //USE SOKOL_FONTSTASH - NOT WORKING BECAUSE CANT GENERATE FONTSTASH.H BINDINGS
@@ -346,7 +367,11 @@ public static partial class Engine
         
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
+
+        Cursor = new() { Name = "Cursor" };
+
         Events.SceneUnmounted += OnSceneUnmounted;
+        Palettes.SetActivePalette(Palettes.ENDESGA);
         Setup?.Invoke();
     }
 
@@ -391,34 +416,33 @@ public static partial class Engine
         imgui_frame.dpi_scale = App.dpi_scale();
         ImGUI.new_frame(&imgui_frame);
 
-        ImGUIHelper.Wrappers.BeginMainMenuBar();
-        if (ImGUIHelper.Wrappers.BeginMenu("Dinghy"))
+        Core.ImGUI.BeginMainMenuBar();
+        if (Core.ImGUI.BeginMenu("Zinc"))
         {
-            ImGUIHelper.Wrappers.Checkbox("Show Stats", ref showStats);
-            ImGUIHelper.Wrappers.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
-            ImGUIHelper.Wrappers.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
-            ImGUIHelper.Wrappers.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
-            foreach (var i in MountedScenes)
+            Core.ImGUI.Checkbox("Show Stats", ref showStats);
+            Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
+            Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
+            Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
+            
+            if (Core.ImGUI.BeginMenu("Sokol"))
             {
-                ImGUIHelper.Wrappers.Text($"{i.Value.Name} {i.Value.Status}");
+                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
+                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
+                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
+                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
+                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
+                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
+                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
+                Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
+                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
+                Core.ImGUI.EndMenu();
             }
-            ImGUIHelper.Wrappers.EndMenu();
+
+            Core.ImGUI.EndMenu();
+
         }
         
-        if (ImGUIHelper.Wrappers.BeginMenu("Sokol"))
-        {
-            ImGUIHelper.Wrappers.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
-            ImGUIHelper.Wrappers.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
-            ImGUIHelper.Wrappers.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
-            ImGUIHelper.Wrappers.Checkbox("Images", ref gfx_dbgui.images.open);
-            ImGUIHelper.Wrappers.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
-            ImGUIHelper.Wrappers.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
-            ImGUIHelper.Wrappers.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
-            ImGUIHelper.Wrappers.Checkbox("Passes", ref gfx_dbgui.passes.open);
-            ImGUIHelper.Wrappers.Checkbox("Capture", ref gfx_dbgui.capture.open);
-            ImGUIHelper.Wrappers.EndMenu();
-        }
-        ImGUIHelper.Wrappers.EndMainMenuBar();
+        Core.ImGUI.EndMainMenuBar();
         
         if (showStats)
         {
@@ -427,7 +451,7 @@ public static partial class Engine
             {
                 ec += l.Count;
             }
-            ImGUIHelper.Wrappers.ShowStats($"{t}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
+            Core.ImGUI.ShowStats($"{t}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
         }
 
         fixed (bool* dem_ptr = &showIMGUIDemo)
@@ -455,7 +479,7 @@ public static partial class Engine
         // Clear the frame buffer.
         if (Clear)
         {
-            GP.set_color(ClearColor.internal_color.r, ClearColor.internal_color.g, ClearColor.internal_color.b, ClearColor.internal_color.a);
+            GP.set_color(ClearColor.R, ClearColor.G, ClearColor.B, ClearColor.A);
             GP.clear();
             GP.reset_color();
         }
@@ -545,15 +569,11 @@ public static partial class Engine
         }
     }
 
-    static void UnmountScene((Scene scene,Action callback) s)
+    static void UnmountScene((Scene scene, Action callback) s)
     {
-        SceneEntityMap.Remove(s.scene);
-        var rm = MountedScenes.Where(x => x.Value == s.scene);
-        foreach (var rms in rm)
-        {
-            MountedScenes.Remove(rms.Key);
-        }
-        s.scene.MountStatus = Scene.SceneMountStatus.Unmounted;
+        SceneEntityMap.Remove(s.scene.ID);
+        MountedScenes.Remove(s.scene.ID);
+        s.scene.MountStatus = SceneMountStatus.Unmounted;
         s.callback?.Invoke();
     }
 
@@ -589,15 +609,20 @@ public static partial class Engine
         }
     }
 
-    public static void DrawTexturedRect(Position p, SpriteRenderer r)
+    public static void DrawTexturedRect(Anchor a, SpriteRenderer r)
     {
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
+        float pivotX = r.Pivot.X * r.Width;
+        float pivotY = r.Pivot.Y * r.Height;
+        GP.translate(world_pos.X, world_pos.Y);
+        GP.translate(-pivotX, -pivotY);
+        GP.rotate_at(world_rotation,pivotX,pivotY);
+        GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -609,15 +634,16 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawTexturedRect(Position p, sg_image i,sgp_rect src)
+    public static void DrawText(Position p, TextRenderer r, sg_image i,sgp_rect src)
     {
+        //NOTE: this doesn't work!
         GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,i);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
+        // GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
+        // GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
+        // GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
@@ -629,87 +655,86 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawShape(Position p, ShapeRenderer r)
+    public static void DrawShape(Anchor a, ShapeRenderer r)
     {
         //argb
         //rgba
-        GP.set_color(r.Color.internal_color.r, r.Color.internal_color.g, r.Color.internal_color.b, r.Color.internal_color.a);
+        GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
-        GP.translate(p.x - p.pivotX,p.y - p.pivotY);
-        GP.rotate_at(p.rotation, p.pivotX, p.pivotY);
-        GP.scale_at(p.scaleX, p.scaleY, p.pivotX, p.pivotY);
-        GP.draw_filled_rect(0,0,r.Width,r.Height);
+        float pivotX = r.Pivot.X * r.Width;
+        float pivotY = r.Pivot.Y * r.Height;
+        GP.translate(-pivotX, -pivotY);
+        GP.translate(world_pos.X, world_pos.Y);
+        GP.rotate_at(world_rotation,pivotX,pivotY);
+        GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
+        GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();
         GP.reset_color();
     }
     
-    public static void DrawParticles(Position p, ParticleEmitterComponent c, List<int> activeIndicies)
+    public static void DrawParticles(Anchor a, ParticleEmitterComponent c, double dt)
     {
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
-        switch (c.Config.ParticleConfig.ParticleType)
-        {
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Rectangle:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_filled_rect(0,0,c.Particles[i].Width,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Line:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_line(0,0,c.Particles[i].Width,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.Triangle:
-                foreach (var i in activeIndicies)
-                {
-                    GP.push_transform();
-                    GP.set_color(c.Particles[i].Color.internal_color.r, c.Particles[i].Color.internal_color.g, c.Particles[i].Color.internal_color.b, c.Particles[i].Color.internal_color.a);
-                    // GP.sgp_translate(p.x, p.y); makes all particles move as if emission point was p.x,p.y
-                    GP.translate(c.Particles[i].Config.EmissionPoint.X + c.Particles[i].X,c.Particles[i].Config.EmissionPoint.Y + c.Particles[i].Y);
-                    GP.rotate_at(c.Particles[i].Rotation, c.Particles[i].Width / 2f, c.Particles[i].Height / 2f);
-                    // GP.scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                    GP.draw_filled_triangle(0,0,c.Particles[i].Width,0,c.Particles[i].Width / 2f,c.Particles[i].Height);
-                    GP.pop_transform();
-                }
-                break;
-            case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.LineStrip:
-                var pts = new Zinc.NativeInterop.Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
-                int first = activeIndicies[0];
-                int ct = 0;
-                foreach (var i in activeIndicies)
-                {
-                    pts[ct] = new sgp_vec2() { x = c.Particles[i].X, y = c.Particles[i].Y };
-                    ct++;
-                }
-                GP.push_transform();
-                GP.set_color(c.Particles[first].Color.internal_color.r, c.Particles[first].Color.internal_color.g, c.Particles[first].Color.internal_color.b, c.Particles[first].Color.internal_color.a);
+        
+        var world = a.GetWorldTransform();
+        world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
 
-                // GP.sgp_translate(p.x, p.y);
-                GP.translate(c.Particles[first].Config.EmissionPoint.X + c.Particles[first].X,c.Particles[first].Config.EmissionPoint.Y + c.Particles[first].Y);
-                GP.rotate_at(c.Particles[first].Rotation, c.Particles[first].Width / 2f, c.Particles[first].Height / 2f);
-                // GP.sgp_scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
-                unsafe
+        Vector2 particle_pos = Vector2.Zero;
+        float particle_width = 0f;
+        float particle_height = 0f;
+        float particle_rot = 0f;
+        Color particle_color = new Color(0,0,0,1f);
+        for (int i = 0; i < c.Count; i++)
+        {
+            if(c.Active[i])
+            {
+                c.Resolve(i, dt, ref particle_pos, ref particle_width, ref particle_height, ref particle_rot, ref particle_color);
+                GP.push_transform();
+                GP.set_color(particle_color.R,particle_color.G, particle_color.B, particle_color.A);
+                // GP.translate(world_pos.X + particle_pos.X, world_pos.Y + particle_pos.Y);
+                GP.translate(c.SpawnLocation[i].X + particle_pos.X, c.SpawnLocation[i].Y + particle_pos.Y);
+                GP.rotate_at(world_rotation + particle_rot, particle_width / 2f, particle_height / 2f);
+                switch (c.Config.Type)
                 {
-                    GP.draw_lines_strip(pts.Ptr,(uint)activeIndicies.Count);
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Rectangle:
+                        GP.draw_filled_rect(0,0,particle_width,particle_height);
+                        break;
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Line:
+                        GP.draw_line(0,0,particle_width,particle_height);
+                        break;
+                    case ParticleEmitterConfig.ParticlePrimitiveType.Triangle:
+                        GP.draw_filled_triangle(0,0,particle_width,0,particle_width / 2f,particle_height);
+                        break;
                 }
                 GP.pop_transform();
-                break;
+                GP.reset_color();
+            }
+        }
+            // case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.LineStrip:
+            //     var pts = new Zinc.NativeInterop.Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
+            //     int first = activeIndicies[0];
+            //     int ct = 0;
+            //     foreach (var i in activeIndicies)
+            //     {
+            //         pts[ct] = new sgp_vec2() { x = c.Particles[i].X, y = c.Particles[i].Y };
+            //         ct++;
+            //     }
+            //     GP.push_transform();
+            //     GP.set_color(c.Particles[first].Color.internal_color.r, c.Particles[first].Color.internal_color.g, c.Particles[first].Color.internal_color.b, c.Particles[first].Color.internal_color.a);
+
+            //     // GP.sgp_translate(p.x, p.y);
+            //     GP.translate(c.Particles[first].Config.EmissionPoint.X + c.Particles[first].X,c.Particles[first].Config.EmissionPoint.Y + c.Particles[first].Y);
+            //     GP.rotate_at(c.Particles[first].Rotation, c.Particles[first].Width / 2f, c.Particles[first].Height / 2f);
+            //     // GP.sgp_scale_at(scaleX, scaleY, f.width / 2f, f.height / 2f); we dont scale, just use width/height
+            //     unsafe
+            //     {
+            //         GP.draw_lines_strip(pts.Ptr,(uint)activeIndicies.Count);
+            //     }
+            //     GP.pop_transform();
+            //     break;
             // case ParticleEmitterComponent.ParticleConfig.ParticlePrimitiveType.TriangleStrip:
             //     var strip_pts = new Utils.NativeArray<sgp_vec2>(activeIndicies.Count);
             //     int first_strip_pt = activeIndicies[0];
@@ -731,9 +756,6 @@ public static partial class Engine
             //     }
             //     GP.sgp_pop_transform();
             //     break;
-            
-        }
-        GP.reset_color();
     }
 
     public enum LogLevel

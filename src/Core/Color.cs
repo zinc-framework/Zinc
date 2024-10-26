@@ -4,65 +4,22 @@ namespace Zinc;
 
 public class Color
 {
-    public float A
-    {
-        get => internal_color.a;
-        set
-        {
-            var internalColor = internal_color;
-            internalColor.a = value;
-            internal_color = internalColor;
-        }
-    }
-    
-    public float R
-    {
-        get => internal_color.r;
-        set
-        {
-            var internalColor = internal_color;
-            internalColor.r = value;
-            internal_color = internalColor;
-        }
-    }
-    
-    public float G
-    {
-        get => internal_color.g;
-        set
-        {
-            var internalColor = internal_color;
-            internalColor.g = value;
-            internal_color = internalColor;
-        }
-    }
-    
-    public float B
-    {
-        get => internal_color.b;
-        set
-        {
-            var internalColor = internal_color;
-            internalColor.b = value;
-            internal_color = internalColor;
-        }
-    }
-
-    public sg_color internal_color {get; private set;}
+    public ref float A => ref internal_color.a;
+    public ref float R => ref internal_color.r;
+    public ref float G => ref internal_color.g;
+    public ref float B => ref internal_color.b;
+    sg_color internal_color;
     public Color(uint hex)
     {
         internal_color = Internal.Sokol.Color.sg_make_color_1i(hex);
     }
 
-    public Color(float a, float r, float g, float b)
+    public Color(float r, float g, float b, float a)
     {
-        internal_color = new sg_color()
-        {
-            a = a,
-            r = r,
-            g = g,
-            b = b
-        };
+        internal_color.r = r;
+        internal_color.g = g;
+        internal_color.b = b;
+        internal_color.a = a;
     }
     
     public static implicit operator Color(uint c)

@@ -1,9 +1,7 @@
 ﻿using System.Reflection;
 using System.Numerics;
-using Arch.Core;
-using Zinc.Core;
-using Zinc.Core.ImGUI;
 using Zinc.Internal.Sokol;
+using System.Collections;
 
 namespace Zinc;
 
@@ -13,6 +11,32 @@ public static class Quick
     public static int RandInt() => Random.Next();
     public static float RandFloat() => Random.NextSingle();
     public static double RandDouble() => Random.NextDouble();
+
+    public static readonly Vector2 StandardGravity = new Vector2(0,9.8f);
+    public static Vector2 North => Up;
+    public static Vector2 South => Down;
+    public static Vector2 East => Right;
+    public static Vector2 West => Left;
+    public static readonly Vector2 Up = new Vector2(0,-1);
+    public static readonly Vector2 Down = new Vector2(0,1);
+    public static readonly Vector2 Left = new Vector2(-1,0);
+    public static readonly Vector2 Right = new Vector2(1,0);
+    public static readonly float UnitUpRadians = MathF.PI * 0.5f;
+    public static readonly float UnitRightRadians = 0f;
+    public static readonly float UnitLeftRadians = MathF.PI;
+    public static readonly float UnitDownRadians = MathF.PI * 1.5f;
+    public static readonly Vector2 UnitUp = new Vector2(MathF.Cos(MathF.PI * 0.5f),-MathF.Sin(MathF.PI * 0.5f));
+    public static readonly Vector2 UnitRight = new Vector2(MathF.Cos(0f),MathF.Sin(0f));
+    public static readonly Vector2 UnitLeft = new Vector2(MathF.Cos(MathF.PI),MathF.Sin(MathF.PI));
+    public static readonly Vector2 UnitDown = new Vector2(MathF.Cos(MathF.PI * 1.5f),-MathF.Sin(MathF.PI * 1.5f));
+    //Rand unit range:
+    public static Vector2 RandUnitPos(float startRadian, float endRadian)
+    {
+        var radian = MapF(RandFloat(),0,1,startRadian,endRadian);
+        return new Vector2(
+            MathF.Cos(radian),
+            -MathF.Sin(radian));
+    }
     
     public static double Map(double value, double fromSource, double toSource, double fromTarget, double toTarget)
     {
@@ -24,18 +48,36 @@ public static class Quick
         return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
     }
 
-    public static void MoveToMouse(Entity e)
+    public static void MoveToMouse(SceneEntity e)
     {
         e.X = InputSystem.MouseX;
         e.Y = InputSystem.MouseY;
     }
 
-    public static Vector2 RandUnitCircle()
+    public static Coroutine Loop(float time, Action action, string name = "loop")
+    {
+        return new Coroutine(innerLoop(),name);
+        IEnumerator innerLoop()
+        {
+            while (true)
+            {
+                action.Invoke();
+                yield return new WaitForSeconds(time);
+            }
+        }
+    }
+
+
+    public static Vector2 RandUnitCirclePos()
     {
         var radian = RandDouble() * Math.PI * 2;
         return new Vector2(
             (float)Math.Cos(radian),
             (float)Math.Sin(radian));
+    }
+    public static float RandUnitCircle()
+    {
+        return RandFloat() * MathF.PI * 2;
     }
 
     static Func<FieldInfo,bool> DefaultFieldSkipFunction = (field) => true;
@@ -43,11 +85,11 @@ public static class Quick
 
     public static void DrawEditGUIForObject<T>(string name, ref T obj, Func<FieldInfo, bool> validFieldCheck = null)
     {
-        ImGUIHelper.Wrappers.SetNextWindowPosition(10, 10, ImGuiCond_.ImGuiCond_Once, 0, 0);
-        ImGUIHelper.Wrappers.Begin(name, ImGuiWindowFlags_.ImGuiWindowFlags_None);
+        Core.ImGUI.SetNextWindowPosition(10, 10, Core.ImGUI.Condition.Once, 0, 0);
+        Core.ImGUI.Begin(name, Core.ImGUI.WindowFlags.None);
         validFieldCheck = validFieldCheck == null ? DefaultFieldSkipFunction : validFieldCheck;
         DrawObjectFields(name,ref obj,validFieldCheck);
-        ImGUIHelper.Wrappers.End();
+        Core.ImGUI.End();
     }
 
     private static void DrawObjectFields<T>(string objectName, ref T o, Func<FieldInfo, bool> validFieldCheck)
@@ -74,11 +116,11 @@ public static class Quick
                     // prefab = ScenarioEditorManager.Instance.ToggleGroup;
                     var en = fieldInfo.FieldType.GetEnumNames();
                     int value = (int)fieldInfo.GetValue(o);
-                    // for (int i = 0; i < en.Length; i++)
-                    // {
-                    //     ImGUIHelper.Wrappers.RadioButton(en[i],ref value,i);
-                    // }
-                    ImGUIHelper.Wrappers.Combo(editLabelName, en, ref value);
+                // for (int i = 0; i < en.Length; i++)
+                // {
+                //     ImGUIHelper.Wrappers.RadioButton(en[i],ref value,i);
+                // }
+                Core.ImGUI.Combo(editLabelName, en, ref value);
                     fieldInfo.SetValue(o,value);
                 }
                 else if (fieldInfo.FieldType.IsClass || fieldInfo.FieldType.IsGenericType)
@@ -88,7 +130,7 @@ public static class Quick
                         case "Color":
                         {
                             Color value = (Color)fieldInfo.GetValue(o);
-                            ImGUIHelper.Wrappers.Color(editLabelName, ref value);
+                            Core.ImGUI.Color(editLabelName, ref value);
                             fieldInfo.SetValue(o,value);
                             break;
                         }
@@ -97,8 +139,8 @@ public static class Quick
                             Vector2 value = (Vector2)fieldInfo.GetValue(o);
                             float x = value.X;
                             float y = value.Y;
-                            ImGUIHelper.Wrappers.SliderFloat2(editLabelName, ref x, ref y, 1f, 1000f, "",
-                                ImGuiSliderFlags_.ImGuiSliderFlags_None);
+                            Core.ImGUI.SliderFloat2(editLabelName, ref x, ref y, 1f, 1000f, "",
+                                Core.ImGUI.SliderFlags.None);
                             fieldInfo.SetValue(o, new Vector2(x,y));
                             break;
                         }
@@ -108,7 +150,7 @@ public static class Quick
                             var cv = fieldInfo.GetValue(o);
                             if (cv != null)
                             {
-                                ImGUIHelper.Wrappers.Text(fieldInfo.Name);
+                            Core.ImGUI.Text(fieldInfo.Name);
                                 DrawObjectFields(editLabelName,ref cv,validFieldCheck);
                             }
                             break;
@@ -124,8 +166,8 @@ public static class Quick
                         case nameof(Int32):
                             {
                                 int v = (int)fieldInfo.GetValue(o);
-                                ImGUIHelper.Wrappers.SliderInt(editLabelName, ref v, 1, 1000, "",
-                                    ImGuiSliderFlags_.ImGuiSliderFlags_None);
+                            Core.ImGUI.SliderInt(editLabelName, ref v, 1, 1000, "",
+                                    Core.ImGUI.SliderFlags.None);
                                 // fieldInfo.SetValueDirect(__makeref(o), v);
                                 fieldInfo.SetValue(o,v);
                                 // prefab = ScenarioEditorManager.Instance.IntInput;
@@ -134,8 +176,8 @@ public static class Quick
                         case nameof(Single):
                             {
                                 float v = (float)fieldInfo.GetValue(o);
-                                ImGUIHelper.Wrappers.SliderFloat(editLabelName, ref v, 1f, 1000f, "",
-                                    ImGuiSliderFlags_.ImGuiSliderFlags_None);
+                            Core.ImGUI.SliderFloat(editLabelName, ref v, 1f, 1000f, "",
+                                    Core.ImGUI.SliderFlags.None);
                                 // fieldInfo.SetValueDirect(__makeref(o), v);
                                 fieldInfo.SetValue(o,v);
                             }

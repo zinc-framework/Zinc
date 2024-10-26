@@ -4,8 +4,16 @@ using Zinc.Core;
 
 namespace Zinc;
 
+[Component<SceneComponent>]
 public partial class Scene : Entity
 {
+    public class SceneRootAnchor(Scene scene) : Anchor(true, scene)
+    {
+        // we hide this ability for SceneRootAnchors
+        new public void SetParent(Anchor parent) {}
+    }
+    public static implicit operator Anchor(Scene p) => p.root!; 
+    private SceneRootAnchor? root;
     private int sceneRenderCounter = 0;
     public int GetNextSceneRenderCounter()
     {
@@ -13,32 +21,14 @@ public partial class Scene : Entity
         sceneRenderCounter++;
         return curr;
     }
-    
-    public enum SceneLoadStatus
-    {
-        Unloaded,
-        Loading,
-        Loaded
-    }
 
-    public enum SceneMountStatus
-    {
-        Unmounted,
-        Mounted
-    }
-    public enum SceneStatus
-    {
-        Inactive,
-        Creating,
-        Running
-    }
-
-    public SceneStatus Status = SceneStatus.Inactive; 
+    public SceneActiveStatus Status = SceneActiveStatus.Inactive; 
     public SceneMountStatus MountStatus = SceneMountStatus.Unmounted; 
-    public SceneLoadStatus LoadStatus = SceneLoadStatus.Unloaded; 
-    public Scene(bool startEnabled = true) : base(startEnabled,null,false)
+    public SceneLoadStatus LoadStatus = SceneLoadStatus.Unloaded;
+
+    public Scene(bool startEnabled = true) : base(startEnabled)
     {
-        ECSEntity.Add(new SceneComponent(Update,this));
+        Engine.SceneLookup.Add(ID,this);
     }
 
     public virtual void Update(double dt){}
@@ -47,21 +37,30 @@ public partial class Scene : Entity
  */
     public void Mount(int depth)
     {
-        Engine.MountedScenes.Add(depth,this);
-        Engine.SceneEntityMap.Add(this,new List<Entity>());
+        Engine.MountedScenes.Add(ID,depth);
+        Engine.SceneEntityMap.Add(ID,[]);
+        Console.WriteLine("mounting scene");
+        root = new SceneRootAnchor(this);
         MountStatus = SceneMountStatus.Mounted;
     }
 
-    public void Unmount(Action callback = null)
+    public void Unmount(Action? callback = null)
     {
         if (MountStatus == SceneMountStatus.Mounted)
         {
-            Cleanup();
-            var rmentites = new List<Entity>(Engine.SceneEntityMap[this]);
-            foreach (var e in rmentites)
+            Console.WriteLine("unmounting scene");
+            Entity staged;
+            var sceneEntityIDs = new List<int>(Engine.SceneEntityMap[ID]);
+            foreach (var eid in sceneEntityIDs)
             {
-                e.Destroy();
+                Engine.TryGetEntity(eid,out staged);
+                if(staged is Anchor) {continue;} //we handle anchors seperatly below
+                staged.Destroy(); //destroys things like coroutines that are attached to a scene but not an anchor
             }
+            Cleanup();
+            root!.Destroy();
+            root = null;
+            Engine.SceneEntityMap[ID].Clear();
             Events.SceneUnmounted?.Invoke(this,callback);
         }
     }
@@ -96,14 +95,31 @@ public partial class Scene : Entity
             }
             return;
         }
-        Status = SceneStatus.Creating;
         if (setAsTargetScene)
         {
             Engine.SetTargetScene(this);
         }
         Create();
-        Status = SceneStatus.Running;
+        Status = SceneActiveStatus.Active;
     }
     public virtual void Create(){}
     public virtual void Cleanup(){}
+}
+
+public enum SceneLoadStatus
+{
+    Unloaded,
+    Loading,
+    Loaded
+}
+
+public enum SceneMountStatus
+{
+    Unmounted,
+    Mounted
+}
+public enum SceneActiveStatus
+{
+    Inactive,
+    Active
 }
