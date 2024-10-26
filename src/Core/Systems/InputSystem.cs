@@ -1,9 +1,10 @@
+using System.Reflection;
 using Arch.Core;
 using Zinc.Internal.Sokol;
 
 namespace Zinc;
 
-public class InputSystem : DSystem, IUpdateSystem
+public partial class InputSystem : DSystem, IUpdateSystem
 {
     QueryDescription frameEvents = new QueryDescription().WithAll<EventMeta, FrameEvent>(); // Should have all specified components
     public enum MouseState //NOTE THE ORDER HERE MATTERS - THIS IS THE PRIORITY WHERE LOWEST IS HIGHEST PRIORTY
@@ -13,9 +14,16 @@ public class InputSystem : DSystem, IUpdateSystem
         Scroll,
         Down
     }
+    public enum KeyState
+    {
+        Up,
+        Down,
+        Pressed,
+        Any
+    }
     public static float MouseX;
     public static float MouseY;
-    public static class Events
+    public static partial class Events
     {
         public static class Key
         {
@@ -63,13 +71,16 @@ public class InputSystem : DSystem, IUpdateSystem
                     case sapp_event_type.SAPP_EVENTTYPE_INVALID:
                         break;
                     case sapp_event_type.SAPP_EVENTTYPE_KEY_DOWN:
-                        if (frameEvent.e.key_repeat > 0)
+                        if (frameEvent.e.key_repeat < 1)
                         {
+                            KeyPressed((Key)frameEvent.e.key_code,FrameModifiers);
                             Events.Key.Pressed?.Invoke((Key)frameEvent.e.key_code,FrameModifiers);
                         }
+                        KeyDown((Key)frameEvent.e.key_code,FrameModifiers);
                         Events.Key.Down?.Invoke((Key)frameEvent.e.key_code,FrameModifiers);
                         break;
                     case sapp_event_type.SAPP_EVENTTYPE_KEY_UP:
+                        KeyUp((Key)frameEvent.e.key_code,FrameModifiers);
                         Events.Key.Up?.Invoke((Key)frameEvent.e.key_code,FrameModifiers);
                         break;
                     case sapp_event_type.SAPP_EVENTTYPE_CHAR:
@@ -228,5 +239,67 @@ public class InputSystem : DSystem, IUpdateSystem
         if ((v & App.SAPP_MODIFIER_RMB) > 0) mods.Add(Modifiers.RMB);
         if ((v & App.SAPP_MODIFIER_MMB) > 0) mods.Add(Modifiers.MMB);
         return mods;
+    }
+
+
+     // Updated dictionary structure to store FieldInfo instead of Action
+    private Dictionary<Zinc.Key, Dictionary<KeyState, FieldInfo>> KeyMethodBindingCache = new();
+    // Separate dictionary for the "Any" state events
+    private Dictionary<Zinc.Key, FieldInfo> KeyAnyStateBindingCache = new();
+    public InputSystem()
+    {
+        //build cache for quick events
+        PopulateKeyMethodBindingCache();
+    }
+    private void PopulateKeyMethodBindingCache()
+    {
+        // Get all nested types in the Events class
+        var keyBindingTypes = typeof(Events)
+            .GetNestedTypes()
+            .Where(t => t.GetCustomAttribute<KeyBindingAttribute>() != null);
+
+        foreach (var keyBindingType in keyBindingTypes)
+        {
+            // Get the Key from the attribute
+            var keyAttribute = keyBindingType.GetCustomAttribute<KeyBindingAttribute>();
+            var zincKey = keyAttribute.Key;
+
+            // Initialize inner dictionary if it doesn't exist
+            if (!KeyMethodBindingCache.ContainsKey(zincKey))
+            {
+                KeyMethodBindingCache[zincKey] = new Dictionary<KeyState, FieldInfo>();
+            }
+
+            // Get all static fields
+            var fields = keyBindingType.GetFields(BindingFlags.Public | BindingFlags.Static);
+            foreach (var field in fields)
+            {
+                var keyStateAttr = field.GetCustomAttribute<KeyStateAttribute>();
+                if (keyStateAttr.State == KeyState.Any)
+                {
+                    KeyAnyStateBindingCache[zincKey] = field;
+                }
+                else
+                {
+                    KeyMethodBindingCache[zincKey][keyStateAttr.State] = field;
+                }
+            }
+        }
+    }
+
+    internal void KeyPressed(Key key, List<Modifiers> mods)
+    {
+        ((Action<List<Modifiers>>)KeyMethodBindingCache[key][KeyState.Pressed].GetValue(null))?.Invoke(mods);
+        ((Action<KeyState, List<Modifiers>>)KeyAnyStateBindingCache[key].GetValue(null))?.Invoke(KeyState.Pressed,mods);
+    }
+    internal void KeyDown(Key key, List<Modifiers> mods)
+    {
+        ((Action<List<Modifiers>>)KeyMethodBindingCache[key][KeyState.Down].GetValue(null))?.Invoke(mods);
+        ((Action<KeyState, List<Modifiers>>)KeyAnyStateBindingCache[key].GetValue(null))?.Invoke(KeyState.Down,mods);
+    }
+    internal void KeyUp(Key key, List<Modifiers> mods)
+    {
+        ((Action<List<Modifiers>>)KeyMethodBindingCache[key][KeyState.Up].GetValue(null))?.Invoke(mods);
+        ((Action<KeyState, List<Modifiers>>)KeyAnyStateBindingCache[key].GetValue(null))?.Invoke(KeyState.Up,mods);
     }
 }
