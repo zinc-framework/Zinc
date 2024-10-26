@@ -48,7 +48,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                         break;
                 }
 
-                if(cm.state != CollisionState.Invalid)
+                if(cm.state != CollisionState.Invalid && (entity1 == Engine.Cursor || entity2 == Engine.Cursor))
                 {
                     PropogateMouseEvents(entity1.ECSEntity,entity2.ECSEntity,entity1 == Engine.Cursor,entity2 == Engine.Cursor,cm.state);
                 }
@@ -62,53 +62,49 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
 
         void PropogateMouseEvents(Arch.Core.Entity e1, Arch.Core.Entity e2, bool e1IsCursor, bool e2IsCursor, CollisionState collisionState)
         {
-            if (e1IsCursor || e2IsCursor)
+            var target = e1IsCursor ? e2 : e1;
+            var managedtarget = e1IsCursor ? entity2 : entity1;
+            //we sort these events here by the enum value to ensure priority for callbacks
+            foreach (var me in mouseEvents.OrderBy(x => x.mouseState))
             {
-                var target = e1IsCursor ? e2 : e1;
-                var managedtarget = e1IsCursor ? entity2 : entity1;
-                //we sort these events here by the enum value to ensure priority for callbacks
-                foreach (var me in mouseEvents.OrderBy(x => x.mouseState))
+                switch (me.mouseState)
                 {
-                    switch (me.mouseState)
-                    {
-                        case InputSystem.MouseState.Up:
-                            target.Get<Collider>().OnMouseUp?.Invoke(managedtarget,me.mods);
-                            break;
-                        case InputSystem.MouseState.Pressed:
-                            target.Get<Collider>().OnMousePressed?.Invoke(managedtarget,me.mods);
-                            break;
-                        case InputSystem.MouseState.Down:
-                            target.Get<Collider>().OnMouseDown?.Invoke(managedtarget,me.mods);
-                            break;
-                        case InputSystem.MouseState.Scroll:
-                            target.Get<Collider>().OnMouseScroll?.Invoke(managedtarget,me.mods,me.scrollX,me.scrollY);
-                            break;
-                    }
+                    case InputSystem.MouseState.Up:
+                        target.Get<Collider>().OnMouseUp?.Invoke(managedtarget,me.mods);
+                        break;
+                    case InputSystem.MouseState.Pressed:
+                        target.Get<Collider>().OnMousePressed?.Invoke(managedtarget,me.mods);
+                        break;
+                    case InputSystem.MouseState.Down:
+                        target.Get<Collider>().OnMouseDown?.Invoke(managedtarget,me.mods);
+                        break;
+                    case InputSystem.MouseState.Scroll:
+                        target.Get<Collider>().OnMouseScroll?.Invoke(managedtarget,me.mods,me.scrollX,me.scrollY);
+                        break;
                 }
+            }
 
-                switch (collisionState)
-                {
-                    case CollisionState.Starting:
-                        target.Get<Collider>().OnMouseEnter?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
-                        break;
-                    case CollisionState.Continuing:
-                        target.Get<Collider>().OnMouseOver?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
-                        break;
-                    case CollisionState.Ending:
-                        target.Get<Collider>().OnMouseExit?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
-                        break;
-                    case CollisionState.Invalid:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(collisionState), collisionState, null);
-                }
-                
+            switch (collisionState)
+            {
+                case CollisionState.Starting:
+                    target.Get<Collider>().OnMouseEnter?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
+                    break;
+                case CollisionState.Continuing:
+                    target.Get<Collider>().OnMouseOver?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
+                    break;
+                case CollisionState.Ending:
+                    target.Get<Collider>().OnMouseExit?.Invoke(managedtarget,Engine.InputSystem.FrameModifiers);
+                    break;
+                case CollisionState.Invalid:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(collisionState), collisionState, null);
             }
         }
     }
 }
 
- public class CollisionSystem : DSystem, IUpdateSystem
+public class CollisionSystem : DSystem, IUpdateSystem
 {
     QueryDescription activeColliders = new QueryDescription().WithAll<ActiveState,EntityID,Collider,Position>().WithNone<Destroy>();
     QueryDescription colQuery = new QueryDescription().WithAll<EventMeta,CollisionMeta,CollisionEvent>();
@@ -125,7 +121,7 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         //run collision checks to find candiates for new collision events and add them to a buffer
         Engine.ECSWorld.Query(in activeColliders, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref Position p, ref Collider c) =>
         {
-
+            e.Get<Collider>().ActiveCollisions.Clear(); //we clear active collisions here each frame, even if collider is inactive
             if(!c.Active || !a.Active){return;}
             //this checks for collisions between all active colliders
             //could be optimized to only check against colliders in the same scene / layer / etc
@@ -156,6 +152,9 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                 em.dirty = false; //keep the event alive
                 if (bufferedCollisionEvents.ContainsKey(cm.hash)) //if we have buffered a collision that already exists
                 {
+                    entity1.ECSEntity.Get<Collider>().ActiveCollisions.Add(entity2);
+                    entity2.ECSEntity.Get<Collider>().ActiveCollisions.Add(entity1);
+
                     cm.state = CollisionState.Continuing;
                     bufferedCollisionEvents.Remove(cm.hash);
                 }
@@ -178,18 +177,17 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
         });
         
         
-
+        Zinc.Entity e1,e2;
         foreach (var e in bufferedCollisionEvents)
         {
+            e1 = Engine.GetEntity(e.Value.entity1ManagedID);
+            e2 = Engine.GetEntity(e.Value.entity2ManagedID);
+            e1.ECSEntity.Get<Collider>().ActiveCollisions.Add(e2);
+            e2.ECSEntity.Get<Collider>().ActiveCollisions.Add(e1);
             Engine.ECSWorld.Create(
                 new EventMeta(e.Value.GetType().ToString()),
                 new CollisionMeta(e.Key),
                 e.Value);
-        }
-        
-        bool CollisionEventValid(Zinc.Entity e1, Zinc.Entity e2)
-        {
-            return !e1.ECSEntity.Has<Destroy>() && !e2.ECSEntity.Has<Destroy>();
         }
     }
 }
