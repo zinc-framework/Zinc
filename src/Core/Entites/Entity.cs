@@ -30,26 +30,17 @@ public partial class Entity
         Active = startEnabled;
     }
 
-    public bool HasTag<T>() => Tags.Any(t => t is T);
-    public bool HasTag(Tag tag) => Tags.Any(t => t == tag);
-    public bool GetTag<T>(out T tag)
-    {
-        foreach (var item in Tags)
-        {
-            if(item is T t)
-            {
-                tag = t;
-                return true;
-            }
-        }
-        tag = default!;
-        return false;
-    }
     public bool GetTags<T>(out List<T> tags)
     {
-        tags = Tags.OfType<T>().ToList();
-        return tags.Count > 0;
+        tags = new List<T>();
+        if(Tags.OfType<T>().Count() > 0)
+        {
+            tags = Tags.OfType<T>().ToList();
+            return true;
+        }
+        return false;
     }
+    public bool Tagged<T>() => Tags.Any(t => t is T);
     public bool Tagged(Tag tag) => Tags.Contains(tag);
     public bool Tagged(params Tag[] tags)
     {
@@ -62,7 +53,6 @@ public partial class Entity
         }
         return true;
     }
-    public bool NotTagged(Tag tag) => !Tags.Contains(tag);
     public bool NotTagged(params Tag[] tags)
     {
         foreach (var tag in tags)
