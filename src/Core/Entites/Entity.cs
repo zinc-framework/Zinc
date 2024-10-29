@@ -130,15 +130,31 @@ public partial class Anchor : SceneObject
     /// Gets the children of this anchor. 
     /// </summary>
     /// <returns>A copy of the list of children</returns>
-    public List<Anchor> GetChildren()
+    public List<Anchor> GetChildren(bool recursive = false)
     {
-        return children;
+        var start = new List<Anchor>(children);
+        if(recursive)
+        {
+            return GetChildrenRecursive(ref start);
+        }
+        return start;
+    }
+
+    List<Anchor> GetChildrenRecursive(ref List<Anchor> allChildren)
+    {
+        foreach (var c in children)
+        {
+            allChildren.Add(c);
+            c.GetChildrenRecursive(ref allChildren);
+        }
+        return allChildren;
     }
 
     public void SetParent(Anchor newParent)
     {
         Parent.children.Remove(this);
         //TODO: figure out how to handle transfoms when changing parents
+        newParent = newParent != null ? newParent : Engine.SceneLookup[SceneID];
         newParent.children.Add(this);
         Parent = newParent;
     }
