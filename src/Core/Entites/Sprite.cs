@@ -14,6 +14,7 @@ public partial class Sprite : SceneEntity
         : base(startEnabled,scene,parent:parent,children:children)
     {
         Data = spriteData; 
+        Renderer_Color = new Color(1.0f,1.0f,1.0f,1.0f);
         RenderOrder = Scene.GetNextSceneRenderCounter();
         ECSEntity.Set(new SpriteRenderer(Data.Texture, Data.Rect));
         Renderer_Pivot = new System.Numerics.Vector2(0.5f);

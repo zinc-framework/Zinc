@@ -7,6 +7,7 @@ public record struct RenderItem(int RenderOrder) : IComponent;
 public record struct SpriteRenderer : IComponent
 {
     public Vector2 Pivot { get; set; }
+    public Color Color {get; set;}
     Texture texture;
     public Texture Texture => texture;
     private Rect rect;
@@ -27,6 +28,7 @@ public record struct SpriteRenderer : IComponent
     {
         texture = t;
         Rect = r;
+        Color = new Color(1.0f,1.0f,1.0f,1.0f);
     }
 }
 

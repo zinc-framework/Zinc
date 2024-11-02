@@ -611,7 +611,7 @@ public static partial class Engine
 
     public static void DrawTexturedRect(Anchor a, SpriteRenderer r)
     {
-        GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
+        GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         var world = a.GetWorldTransform();
