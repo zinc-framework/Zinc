@@ -145,13 +145,18 @@ public partial class Anchor : SceneObject
 
     public void SetParent(Anchor newParent)
     {
+        //TODO: update position for new parent - this is a bit tricky
+
+
         // Don't allow parenting to null unless we're the scene root
         newParent = newParent ?? Engine.SceneLookup[SceneID];
         
         // Check for recursive parenting without using GetChildren
         if (newParent != null && newParent.IsAncestor(this))
         {
-            Console.WriteLine("WARNING!!: RECURSIVE PARENTING DETECTED");
+            Console.WriteLine("WARNING!!: RECURSIVE PARENTING DETECTED------------------");
+            Console.WriteLine($"Trying to assign parent for {Name} to: {newParent.Name}, but {Name} is already a child of {newParent.Name}");
+            Console.WriteLine("------------------");
             return; // Prevent the invalid parent assignment
         }
 
@@ -166,7 +171,7 @@ public partial class Anchor : SceneObject
     private bool IsAncestor(Anchor potentialAncestor)
     {
         var current = this;
-        while (current.Parent != null)
+        while (current.Parent != null && current.Parent is not Scene.SceneRootAnchor)
         {
             if (current.Parent == potentialAncestor)
                 return true;
