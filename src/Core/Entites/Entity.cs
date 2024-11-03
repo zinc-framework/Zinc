@@ -124,27 +124,6 @@ public partial class Anchor : SceneObject
         }
     }
 
-    public float LocalRotation
-    {
-        get
-        {
-            if (Parent == null || Parent is Scene.SceneRootAnchor)
-                return Rotation;
-
-            return Rotation - Parent.Rotation;
-        }
-        set
-        {
-            if (Parent == null || Parent is Scene.SceneRootAnchor)
-            {
-                Rotation = value;
-                return;
-            }
-
-            Rotation = Parent.Rotation + value;
-        }
-    }
-
     public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled,scene)
     {

@@ -15,7 +15,5 @@ public record struct GridComponent(Vector2 GridPivot, Vector2 CellPivot, float C
         index = index % (NumHorizonalCells * NumVerticalCells); //loop index
         x = startX + ((index % NumHorizonalCells) * CellWidth) + (CellWidth * CellPivot.X);
         y = startY + ((index / NumHorizonalCells) * CellHeight) + (CellHeight * CellPivot.Y);
-        // x = localX - (GridWidth * GridPivot.X);
-        // y = localY - (GridHeight * GridPivot.Y);
     }
 }
