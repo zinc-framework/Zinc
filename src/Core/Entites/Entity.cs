@@ -190,21 +190,58 @@ private void SetLocalPosition(Vector2 localPos)
     Y = worldPos.Y;
 }
 
-    /// <summary>
+/// <summary>
     /// Gets the children of this anchor. 
     /// </summary>
     /// <returns>A copy of the list of children</returns>
-    public List<Anchor> GetChildren()
+    public List<Anchor> GetChildren(bool recursive = false)
     {
-        return children;
+        var result = new List<Anchor>(children);
+        if (recursive)
+        {
+            foreach (var child in children)
+            {
+                result.AddRange(child.GetChildren(true));
+            }
+        }
+        return result;
     }
 
     public void SetParent(Anchor newParent)
     {
-        Parent.children.Remove(this);
-        //TODO: figure out how to handle transfoms when changing parents
+        //TODO: update position for new parent - this is a bit tricky
+
+
+        // Don't allow parenting to null unless we're the scene root
+        newParent = newParent ?? Engine.SceneLookup[SceneID];
+        
+        // Check for recursive parenting without using GetChildren
+        if (newParent != null && newParent.IsAncestor(this))
+        {
+            Console.WriteLine("WARNING!!: RECURSIVE PARENTING DETECTED------------------");
+            Console.WriteLine($"Trying to assign parent for {Name} to: {newParent.Name}, but {Name} is already a child of {newParent.Name}");
+            Console.WriteLine("------------------");
+            return; // Prevent the invalid parent assignment
+        }
+
+        // Remove from old parent
+        Parent?.children.Remove(this);
+        
+        // Add to new parent
         newParent.children.Add(this);
         Parent = newParent;
+    }
+
+    private bool IsAncestor(Anchor potentialAncestor)
+    {
+        var current = this;
+        while (current.Parent != null && current.Parent is not Scene.SceneRootAnchor)
+        {
+            if (current.Parent == potentialAncestor)
+                return true;
+            current = current.Parent;
+        }
+        return false;
     }
 
     public Anchor AddChild(Anchor child)
