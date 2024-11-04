@@ -144,6 +144,18 @@ public partial class Anchor : SceneObject
                 AddChild(c);
             }
         }
+
+        PositionUpdated += (float dx, float dy) => {
+            if(this.children.Count == 0)
+            {
+                return;
+            }
+            foreach (var child in this.children)
+            {
+                child.X += dx;
+                child.Y += dy;
+            }
+        };
     }
 
 private Vector2 GetLocalPosition()
