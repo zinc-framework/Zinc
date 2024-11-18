@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Zinc.Internal.STB;
 using Arch.Core;
 using Zinc.Core;
-using FontStashSharp;
 using Utils = Zinc.NativeInterop.Utils;
 
 namespace Zinc;
@@ -247,8 +246,6 @@ public static partial class Engine
     public static bool Clear = true;
 
     public static core_state state = default;
-    public static font_context font_state = default;
-    
     public static sg_imgui_t gfx_dbgui = default;
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -374,10 +371,6 @@ public static partial class Engine
         Palettes.SetActivePalette(Palettes.ENDESGA);
         Setup?.Invoke();
     }
-
-    public static FontSystem fontSystem;
-    public static FontstashRenderer fontRenderer = new();
-
 
 
     public static int Width;
