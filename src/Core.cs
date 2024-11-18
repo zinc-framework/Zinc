@@ -462,6 +462,10 @@ public static partial class Engine
         
         float ratio = Width/(float)Height;
 
+        GL.defaults();
+        GL.matrix_mode_projection();
+        GL.ortho(0.0f, Width,Height, 0.0f, -1.0f, +1.0f);
+
         // Begin recording draw commands for a frame buffer of size (width, height).
         GP.begin(Width, Height);
         // Set frame buffer drawing region to (0,0,width,height).
@@ -513,7 +517,7 @@ public static partial class Engine
         { 
             DebugOverlay.Update(DeltaTime);
         }
-        
+
         // var text = "MYSTERY DUNGEON HAND";
         // var scale = new Vector2(1, 1);
         //
@@ -532,11 +536,13 @@ public static partial class Engine
         fixed (sg_pass_action* pass = &state.pass_action)
         {
             Gfx.begin_default_pass(pass, Width, Height);
+            // draw with sokol gl (font)
             // Dispatch all draw commands to Sokol GFX.
             GP.flush();
             // Finish a draw command queue, clearing it.
             GP.end();
             DebugText.draw();
+            GL.draw();
             ImGUI.render();
             Gfx.end_pass();
             Gfx.commit();
@@ -780,7 +786,7 @@ public static partial class Engine
         ImGUI.shutdown();
         // Gfx.destroy_image(image);
         GP.shutdown();
-        // GL.shutdown();
+        GL.shutdown();
         Gfx.shutdown();
     }
     
