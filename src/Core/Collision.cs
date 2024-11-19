@@ -135,21 +135,29 @@ public static class Utils
             var (worldTransform, worldScale) = entity.GetWorldTransform();
             Vector2 pivot = new Vector2(c.Pivot.X * c.Width, c.Pivot.Y * c.Height);
 
-            Vector2[] localCorners = new Vector2[]
+            //corners
+            return new Vector2[]
             {
-                new Vector2(-pivot.X, -pivot.Y),
-                new Vector2(c.Width - pivot.X, -pivot.Y),
-                new Vector2(c.Width - pivot.X, c.Height - pivot.Y),
-                new Vector2(-pivot.X, c.Height - pivot.Y)
+                Vector2.Transform(new Vector2(-pivot.X            * worldScale.X, -pivot.Y * worldScale.Y),worldTransform),
+                Vector2.Transform(new Vector2((c.Width - pivot.X) * worldScale.X, -pivot.Y * worldScale.Y),worldTransform),
+                Vector2.Transform(new Vector2((c.Width - pivot.X) * worldScale.X, (c.Height - pivot.Y) * worldScale.Y),worldTransform),
+                Vector2.Transform(new Vector2(-pivot.X            * worldScale.X, (c.Height - pivot.Y) * worldScale.Y),worldTransform)
             };
+            // Vector2[] localCorners = new Vector2[]
+            // {
+            //     new Vector2(-pivot.X , -pivot.Y),
+            //     new Vector2(c.Width - pivot.X, -pivot.Y),
+            //     new Vector2(c.Width - pivot.X, c.Height - pivot.Y),
+            //     new Vector2(-pivot.X, c.Height - pivot.Y)
+            // };
 
-            return localCorners.Select(corner =>
-            {
-                // Apply scale
-                Vector2 scaledCorner = new Vector2(corner.X * worldScale.X, corner.Y * worldScale.Y);
-                // Apply world transform
-                return Vector2.Transform(scaledCorner, worldTransform);
-            }).ToArray();
+            // return localCorners.Select(corner =>
+            // {
+            //     // Apply scale
+            //     Vector2 scaledCorner = new Vector2(corner.X * worldScale.X, corner.Y * worldScale.Y);
+            //     // Apply world transform
+            //     return Vector2.Transform(scaledCorner, worldTransform);
+            // }).ToArray();
         }
 
         // Fallback for entities without transform
