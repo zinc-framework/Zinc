@@ -53,6 +53,35 @@ public static class ImGUI
     }
 
     [Flags]
+    public enum InputFlags
+    {
+        None = ImGuiInputFlags_.ImGuiInputFlags_None,
+        Repeat = ImGuiInputFlags_.ImGuiInputFlags_Repeat,
+        RepeatRateDefault = ImGuiInputFlags_.ImGuiInputFlags_RepeatRateDefault,
+        RepeatRateNavMove = ImGuiInputFlags_.ImGuiInputFlags_RepeatRateNavMove,
+        RepeatRateNavTweak = ImGuiInputFlags_.ImGuiInputFlags_RepeatRateNavTweak,
+        RepeatRateMask = ImGuiInputFlags_.ImGuiInputFlags_RepeatRateMask_,
+        CondHovered = ImGuiInputFlags_.ImGuiInputFlags_CondHovered,
+        CondActive = ImGuiInputFlags_.ImGuiInputFlags_CondActive,
+        CondDefault = ImGuiInputFlags_.ImGuiInputFlags_CondDefault_,
+        CondMask = ImGuiInputFlags_.ImGuiInputFlags_CondMask_,
+        LockThisFrame = ImGuiInputFlags_.ImGuiInputFlags_LockThisFrame,
+        LockUntilRelease = ImGuiInputFlags_.ImGuiInputFlags_LockUntilRelease,
+        RouteFocused = ImGuiInputFlags_.ImGuiInputFlags_RouteFocused,
+        RouteGlobalLow = ImGuiInputFlags_.ImGuiInputFlags_RouteGlobalLow,
+        RouteGlobal = ImGuiInputFlags_.ImGuiInputFlags_RouteGlobal,
+        RouteGlobalHigh = ImGuiInputFlags_.ImGuiInputFlags_RouteGlobalHigh,
+        RouteMask = ImGuiInputFlags_.ImGuiInputFlags_RouteMask_,
+        RouteAlways = ImGuiInputFlags_.ImGuiInputFlags_RouteAlways,
+        RouteUnlessBgFocused = ImGuiInputFlags_.ImGuiInputFlags_RouteUnlessBgFocused,
+        RouteExtraMask = ImGuiInputFlags_.ImGuiInputFlags_RouteExtraMask_,
+        SupportedByIsKeyPressed = ImGuiInputFlags_.ImGuiInputFlags_SupportedByIsKeyPressed,
+        SupportedByShortcut = ImGuiInputFlags_.ImGuiInputFlags_SupportedByShortcut,
+        SupportedBySetKeyOwner = ImGuiInputFlags_.ImGuiInputFlags_SupportedBySetKeyOwner,
+        SupportedBySetItemKeyOwner = ImGuiInputFlags_.ImGuiInputFlags_SupportedBySetItemKeyOwner,
+    }
+
+    [Flags]
     public enum Condition
     {
         None = ImGuiCond_.ImGuiCond_None,
@@ -153,6 +182,29 @@ public static class ImGUI
         fixed (byte* t_p = t)
         {
             Internal.Sokol.ImGUI.igText((sbyte*)t_p);
+        }
+    }
+
+    public static unsafe void TextInput(string label, ref string value, uint maxLength = 256, InputFlags flags = InputFlags.None)
+    {
+        var t = System.Text.Encoding.UTF8.GetBytes(label);
+        var v = System.Text.Encoding.UTF8.GetBytes(string.IsNullOrEmpty(value) ? " " : value);
+        fixed (byte* t_p = t, v_p = v)
+        {
+            Internal.Sokol.ImGUI.igInputText((sbyte*)t_p, (sbyte*)v_p, maxLength, (int)flags, null, null);
+            value = StringFromPtr(v_p);
+        }
+
+        string StringFromPtr(byte* ptr)
+        {
+            //https://github.com/ImGuiNET/ImGui.NET/blob/70a87022f775025b90dbe2194e44983c79de0911/src/ImGui.NET/Util.cs#L11
+            int characters = 0;
+            while (ptr[characters] != 0)
+            {
+                characters++;
+            }
+
+            return System.Text.Encoding.UTF8.GetString(ptr, characters);
         }
     }
     
