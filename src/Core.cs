@@ -238,11 +238,11 @@ public static partial class Engine
     }
     
     
-    public unsafe struct font_context
+    internal struct FontState
     {
-        public void* ctx;
+        public unsafe void* FONSContext;
     }
-
+    internal static FontState font_state;
     public static bool Clear = true;
 
     public static core_state state = default;
@@ -362,6 +362,13 @@ public static partial class Engine
         // fontSystem = new FontSystem(settings);
         // fontSystem.AddFont(File.ReadAllBytes(@"data/fonts/hack/Hack-Bold.ttf"));
         
+        DPIScale = App.dpi_scale();
+        var atlasDim = round_pow2(512.0f * DPIScale);
+        sfons_desc_t font_desc = default;
+        font_desc.width = atlasDim;
+        font_desc.height = atlasDim;
+        font_state.FONSContext = Fontstash.create(&font_desc);
+        
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
 
@@ -370,11 +377,21 @@ public static partial class Engine
         Events.SceneUnmounted += OnSceneUnmounted;
         Palettes.SetActivePalette(Palettes.ENDESGA);
         Setup?.Invoke();
+
+        //get closest power of two
+        int round_pow2(float v) {
+            uint vi = ((uint) v) - 1;
+            for (uint i = 0; i < 5; i++) {
+                vi |= (vi >> (1<<(int)i));
+            }
+            return (int) (vi + 1);
+        }
     }
 
 
     public static int Width;
     public static int Height;
+    public static float DPIScale;
 
     private static float angle_deg = 0;
     private static float scale = 0;
@@ -402,11 +419,13 @@ public static partial class Engine
         Width = App.width();
         Height = App.height();
 
+        Fontstash.fonsClearState(font_state.FONSContext);
+
         simgui_frame_desc_t imgui_frame = default;
         imgui_frame.width = Width;
         imgui_frame.height = Height;
         imgui_frame.delta_time = DeltaTime;
-        imgui_frame.dpi_scale = App.dpi_scale();
+        imgui_frame.dpi_scale = DPIScale;
         ImGUI.new_frame(&imgui_frame);
 
         Core.ImGUI.BeginMainMenuBar();
@@ -464,7 +483,7 @@ public static partial class Engine
 
         GL.defaults();
         GL.matrix_mode_projection();
-        GL.ortho(0.0f, Width,Height, 0.0f, -1.0f, +1.0f);
+        GL.ortho(0.0f, Width,Height, 0.0f, -100.0f, +100.0f);
 
         // Begin recording draw commands for a frame buffer of size (width, height).
         GP.begin(Width, Height);
@@ -633,25 +652,42 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawText(Position p, TextRenderer r, sg_image i,sgp_rect src)
+    public static void DrawText(Anchor a, TextRenderer r, int fontID)
     {
-        //NOTE: this doesn't work!
-        GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
-        GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
-        GP.set_image(0,i);
-        GP.push_transform();
-        // GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
-        // GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
-        // GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
-        GP.draw_textured_rect(0,
-            //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
-            //we assume this is the width and height of the frame itself
-            src,
-            //this is the rect index into the texture itself
-            src);
-        GP.pop_transform();
-        // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
-        GP.reset_image(0);
+        var n = System.Text.Encoding.UTF8.GetBytes(r.text);
+        unsafe
+        {
+            Fontstash.fonsSetSize(font_state.FONSContext, r.size*DPIScale);
+            Fontstash.fonsSetFont(font_state.FONSContext, fontID);
+            // Fontstash.fonsVertMetrics(font_state.FONSContext, null, null, &lh);
+            // Fontstash.fonsSetColor(font_state.FONSContext, white);
+            uint white = Fontstash.rgba(255, 255, 255, 255);
+            Fontstash.fonsSetColor(font_state.FONSContext, white);
+            Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_MIDDLE));
+            Fontstash.fonsSetSpacing(font_state.FONSContext, r.spacing*DPIScale);
+            Fontstash.fonsSetBlur(font_state.FONSContext, r.blur);
+            
+            fixed (byte* n_p = n)
+            {
+                var width = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
+                // var width = Fontstash.fonsLineBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
+                GL.push_matrix();
+                GL.translate(a.X,a.Y,0);
+                float pivotX = r.Pivot.X * width;
+                // float pivotY = r.Pivot.Y * r.Height;
+                GL.translate(-pivotX, 0,0);
+                GL.translate(pivotX, 0,0);
+                GL.rotate(a.Rotation,0,0,1);
+                GL.scale(a.ScaleX, a.ScaleY,1);
+                GL.translate(-pivotX, 0,0);
+                var dx = Fontstash.fonsDrawText(font_state.FONSContext, 0, 0, (sbyte*)n_p, null);
+                GL.pop_matrix();
+                // Console.WriteLine($"{dx} {b}");
+            }
+
+            // GL.draw();
+
+        }
     }
     
     public static void DrawShape(Anchor a, ShapeRenderer r)
@@ -785,6 +821,10 @@ public static partial class Engine
         }
         ImGUI.shutdown();
         // Gfx.destroy_image(image);
+        unsafe
+        {
+            Fontstash.destroy(font_state.FONSContext);
+        }
         GP.shutdown();
         GL.shutdown();
         Gfx.shutdown();

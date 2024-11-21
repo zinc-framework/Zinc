@@ -37,4 +37,4 @@ public record struct SpriteRenderer : IComponent
 
 public record struct ShapeRenderer(Color Color, float Width, float Height, Vector2 Pivot) : IComponent;
 //TODO: make this actually work
-public record struct TextRenderer(Color Color, string text,float Width, float Height) : IComponent;
+public record struct TextRenderer(Color Color, string fontPath, string text, float size, float spacing, float blur, Vector2 Pivot) : IComponent;
