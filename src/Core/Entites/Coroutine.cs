@@ -13,6 +13,13 @@ public partial class Coroutine : SceneObject
         CompletionCallback = completionCallback;
     }
 
+    public Coroutine(CustomYieldInstruction coroutineMethod, string name = "coroutine", Action? completionCallback = null, bool startAutomatically = true, Scene? scene = null) : base(startAutomatically, scene)
+    {
+        CoroutineMethod = coroutineMethod.Wait();
+        CoroutineName = name;
+        CompletionCallback = completionCallback;
+    }
+
     public void Reset(bool startAfterReset = true)
     {
         ExecutionStack = null;
