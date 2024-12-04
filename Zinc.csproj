@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Arch" Version="1.2.7" />
+    <PackageReference Include="Arch.AOT.SourceGenerator" Version="1.0.1" />
     <PackageReference Include="Depot.SourceGenerator" Version="1.0.5" />
     <PackageReference Include="Zinc.ECSGenerator" Version="1.2.8" />
     <PackageReference Include="Zinc.Magic" Version="1.0.1" />

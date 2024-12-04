@@ -14,7 +14,7 @@ public enum CollisionState
 public record struct CollisionMeta(int hash, CollisionState state = CollisionState.Starting);
 public record CollisionEvent(int entity1ManagedID, int entity2ManagedID);
 
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct Collider(float Width, float Height, Vector2 Pivot,
     bool Active = false,
     Action<Entity, Entity> OnStart = null,

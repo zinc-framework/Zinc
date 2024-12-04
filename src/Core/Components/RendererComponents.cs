@@ -2,8 +2,9 @@ using System.Numerics;
 using static Zinc.Resources;
 
 namespace Zinc;
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct RenderItem(int RenderOrder) : IComponent;
+[Arch.AOT.SourceGenerator.Component]
 public record struct SpriteRenderer : IComponent
 {
     public Vector2 Pivot { get; set; }
@@ -34,7 +35,8 @@ public record struct SpriteRenderer : IComponent
 
 
 
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct ShapeRenderer(Color Color, float Width, float Height, Vector2 Pivot) : IComponent;
 //TODO: make this actually work
+[Arch.AOT.SourceGenerator.Component]
 public record struct TextRenderer(Color Color, string fontPath, string text, float size, float spacing, float blur, Vector2 Pivot) : IComponent;

@@ -1,12 +1,11 @@
 ﻿using System.Numerics;
-
 namespace Zinc;
 
 public interface IComponent {}
 
 // public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float ScaleY = 1, float Rotation = 0f) : IComponent
 // {
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct Position : IComponent
 {
     float scaleX = 1;
@@ -90,4 +89,5 @@ public record struct Position : IComponent
 
 //note that update needs to be tied to a managed entity
 //its assumed that if you are making raw ecs entities you are working with systems
+[Arch.AOT.SourceGenerator.Component]
 public record struct UpdateListener(Action<Zinc.Entity,double> Update) : IComponent;

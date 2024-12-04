@@ -1,7 +1,7 @@
 using System.Numerics;
 
 namespace Zinc;
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct GridComponent(Vector2 GridPivot, Vector2 CellPivot, float CellWidth = 8, float CellHeight = 8, int NumHorizonalCells = 8, int NumVerticalCells = 8) : IComponent
 {
     public float GridWidth => CellWidth * NumHorizonalCells;
