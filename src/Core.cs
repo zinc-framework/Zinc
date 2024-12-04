@@ -246,19 +246,21 @@ public static partial class Engine
     public static bool Clear = true;
 
     public static core_state state = default;
-    public static sg_imgui_t gfx_dbgui = default;
+    public static sgimgui_t gfx_dbgui = default;
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Initialize()
     {
+        Console.WriteLine("Initializing Zinc");
         //sokol init
         sg_desc desc = default;
-        desc.context = Glue.sapp_sgcontext();
+        desc.environment = Glue.sglue_environment();
         //call our own logger
         desc.logger.func = &Sokol_Logger;
         //call native logger
         // desc.logger.func = (delegate* unmanaged[Cdecl]<sbyte*, uint, uint, sbyte*, uint, sbyte*, void*, void>)NativeLibrary.GetExport(NativeLibrary.Load("libs/sokol"), "slog_func");
         Gfx.setup(&desc);
+        Console.WriteLine("gfx setup");
 
         sgl_desc_t gl_desc = default;
         GL.setup(&gl_desc);
@@ -267,22 +269,25 @@ public static partial class Engine
         imgui_desc.logger.func = &Sokol_Logger;
         ImGUI.setup(&imgui_desc);
         
-        sg_imgui_desc_t sg_imgui_desc = default;
-        gfx_dbgui.buffers.open = 1;
-        gfx_dbgui.images.open = 1;
-        gfx_dbgui.samplers.open = 1;
-        gfx_dbgui.shaders.open = 1;
-        gfx_dbgui.pipelines.open = 1;
-        gfx_dbgui.passes.open = 1;
-        gfx_dbgui.capture.open = 1;
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        sgimgui_desc_t sg_imgui_desc = default;
+        gfx_dbgui.buffer_window.open = 1;
+        gfx_dbgui.image_window.open = 1;
+        gfx_dbgui.sampler_window.open = 1;
+        gfx_dbgui.shader_window.open = 1;
+        gfx_dbgui.pipeline_window.open = 1;
+        gfx_dbgui.attachments_window.open = 1;
+        gfx_dbgui.frame_stats_window.open = 1;
+        gfx_dbgui.capture_window.open = 1;
+        gfx_dbgui.caps_window.open = 1;
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.init(ctx,&sg_imgui_desc);
+            GfxDebugGUI.sgimgui_init(ctx,&sg_imgui_desc);
         }
 
         sgp_desc gp_desc = default;
         gp_desc.max_vertices = 1000000;
         GP.setup(&gp_desc);
+        Console.WriteLine("gp setup");
 
         sdtx_desc_t debug_text_desc = default;
         debug_text_desc.fonts[0] = DebugText.font_kc853();
@@ -324,6 +329,7 @@ public static partial class Engine
         state.checkerboard.img = Gfx.make_image(&checkerboard_desc);
         state.checkerboard.width = checkerboardTexSize;
         state.checkerboard.height = checkerboardTexSize;
+        Console.WriteLine("checkerboard setup");
         
         // ... and a sampler
         sg_sampler_desc sample_desc = default;
@@ -339,10 +345,15 @@ public static partial class Engine
         Height = App.height();
 
         ActiveSystems = new HashSet<DSystem>(DefaultSystems);
+        Console.WriteLine("systems setup");
         
+        Console.WriteLine("creating physics world");
         PhysicsWorld = new ();
+        Console.WriteLine("creating ecs world");
         ECSWorld = World.Create();
+        Console.WriteLine("creating global scene");
         GlobalScene = new(){Name = "Global Scene"};
+        Console.WriteLine("assigned global scene");
 
         
         //USE SOKOL_FONTSTASH - NOT WORKING BECAUSE CANT GENERATE FONTSTASH.H BINDINGS
@@ -368,14 +379,18 @@ public static partial class Engine
         font_desc.width = atlasDim;
         font_desc.height = atlasDim;
         font_state.FONSContext = Fontstash.create(&font_desc);
+        Console.WriteLine("fontstash setup");
+
         
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
+        Console.WriteLine("global scene mounted");
 
         Cursor = new() { Name = "Cursor" };
 
         Events.SceneUnmounted += OnSceneUnmounted;
         Palettes.SetActivePalette(Palettes.ENDESGA);
+        Console.WriteLine("invoking setup");
         Setup?.Invoke();
 
         //get closest power of two
@@ -438,15 +453,15 @@ public static partial class Engine
             
             if (Core.ImGUI.BeginMenu("Sokol"))
             {
-                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
-                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
-                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
-                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
-                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
-                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
-                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
-                Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
-                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
+                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps_window.open);
+                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats_window.open);
+                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffer_window.open);
+                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.image_window.open);
+                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.sampler_window.open);
+                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shader_window.open);
+                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipeline_window.open);
+                Core.ImGUI.Checkbox("Attachments", ref gfx_dbgui.attachments_window.open);
+                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture_window.open);
                 Core.ImGUI.EndMenu();
             }
 
@@ -474,9 +489,9 @@ public static partial class Engine
             }
         }
 
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.draw(ctx);
+            GfxDebugGUI.sgimgui_draw(ctx);
         }
         
         float ratio = Width/(float)Height;
@@ -552,9 +567,13 @@ public static partial class Engine
 
         // setting this to load instead of clear allows us to toggle sokol_gp clearing
         state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_LOAD;
-        fixed (sg_pass_action* pass = &state.pass_action)
+        fixed (sg_pass_action* pass_ptr = &state.pass_action)
         {
-            Gfx.begin_default_pass(pass, Width, Height);
+            sg_pass pass = default;
+            pass.action = *pass_ptr;
+            pass.swapchain = Glue.sglue_swapchain();
+            // Gfx.begin_default_pass(pass, Width, Height);
+            Gfx.begin_pass(&pass);
             // draw with sokol gl (font)
             // Dispatch all draw commands to Sokol GFX.
             GP.flush();
@@ -815,9 +834,9 @@ public static partial class Engine
     private static unsafe void Cleanup()
     {
         Events.SceneUnmounted -= OnSceneUnmounted;
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.discard(ctx);
+            GfxDebugGUI.sgimgui_discard(ctx);
         }
         ImGUI.shutdown();
         // Gfx.destroy_image(image);
