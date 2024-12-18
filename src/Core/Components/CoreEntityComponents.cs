@@ -1,5 +1,6 @@
 namespace Zinc;
 
+[Arch.AOT.SourceGenerator.Component]
 public readonly record struct Destroy();
 [Arch.AOT.SourceGenerator.Component]
 public record struct ActiveState(bool Active = true) : IComponent;
