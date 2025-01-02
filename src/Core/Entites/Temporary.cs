@@ -12,5 +12,5 @@ public partial class TemporaryShape : Shape
         Lifetime = lifetime;
     }
 }
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct TemporaryComponent(float Lifetime = 2, double CurrentLife = 0) : IComponent;

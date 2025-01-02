@@ -28,17 +28,14 @@ public static class ImGUI
         NoNavInputs = ImGuiWindowFlags_.ImGuiWindowFlags_NoNavInputs,
         NoNavFocus = ImGuiWindowFlags_.ImGuiWindowFlags_NoNavFocus,
         UnsavedDocument = ImGuiWindowFlags_.ImGuiWindowFlags_UnsavedDocument,
-        NoDocking = ImGuiWindowFlags_.ImGuiWindowFlags_NoDocking,
         NoNav = ImGuiWindowFlags_.ImGuiWindowFlags_NoNav,
         NoDecoration = ImGuiWindowFlags_.ImGuiWindowFlags_NoDecoration,
         NoInputs = ImGuiWindowFlags_.ImGuiWindowFlags_NoInputs,
-        NavFlattened = ImGuiWindowFlags_.ImGuiWindowFlags_NavFlattened,
         ChildWindow = ImGuiWindowFlags_.ImGuiWindowFlags_ChildWindow,
         Tooltip = ImGuiWindowFlags_.ImGuiWindowFlags_Tooltip,
         Popup = ImGuiWindowFlags_.ImGuiWindowFlags_Popup,
         Modal = ImGuiWindowFlags_.ImGuiWindowFlags_Modal,
         ChildMenu = ImGuiWindowFlags_.ImGuiWindowFlags_ChildMenu,
-        DockNodeHost = ImGuiWindowFlags_.ImGuiWindowFlags_DockNodeHost,
     }
 
     [Flags]
@@ -50,6 +47,22 @@ public static class ImGUI
         NoRoundToFormat = ImGuiSliderFlags_.ImGuiSliderFlags_NoRoundToFormat,
         NoInput = ImGuiSliderFlags_.ImGuiSliderFlags_NoInput,
         InvalidMask_ = ImGuiSliderFlags_.ImGuiSliderFlags_InvalidMask_
+    }
+
+    [Flags]
+    public enum InputFlags
+    {
+        None = ImGuiInputFlags_.ImGuiInputFlags_None,
+        Repeat = ImGuiInputFlags_.ImGuiInputFlags_Repeat,
+        RouteActive = ImGuiInputFlags_.ImGuiInputFlags_RouteActive,
+        RouteFocused = ImGuiInputFlags_.ImGuiInputFlags_RouteFocused,
+        RouteGlobal = ImGuiInputFlags_.ImGuiInputFlags_RouteGlobal,
+        RouteAlways = ImGuiInputFlags_.ImGuiInputFlags_RouteAlways,
+        RouteOverFocused = ImGuiInputFlags_.ImGuiInputFlags_RouteOverFocused,
+        RouteOverActive = ImGuiInputFlags_.ImGuiInputFlags_RouteOverActive,
+        RouteUnlessBgFocused = ImGuiInputFlags_.ImGuiInputFlags_RouteUnlessBgFocused,
+        RouteFromRootWindow = ImGuiInputFlags_.ImGuiInputFlags_RouteFromRootWindow,
+        Tooltip = ImGuiInputFlags_.ImGuiInputFlags_Tooltip,
     }
 
     [Flags]
@@ -153,6 +166,29 @@ public static class ImGUI
         fixed (byte* t_p = t)
         {
             Internal.Sokol.ImGUI.igText((sbyte*)t_p);
+        }
+    }
+
+    public static unsafe void TextInput(string label, ref string value, uint maxLength = 256, InputFlags flags = InputFlags.None)
+    {
+        var t = System.Text.Encoding.UTF8.GetBytes(label);
+        var v = System.Text.Encoding.UTF8.GetBytes(string.IsNullOrEmpty(value) ? " " : value);
+        fixed (byte* t_p = t, v_p = v)
+        {
+            Internal.Sokol.ImGUI.igInputText((sbyte*)t_p, (sbyte*)v_p, maxLength, (int)flags, null, null);
+            value = StringFromPtr(v_p);
+        }
+
+        string StringFromPtr(byte* ptr)
+        {
+            //https://github.com/ImGuiNET/ImGui.NET/blob/70a87022f775025b90dbe2194e44983c79de0911/src/ImGui.NET/Util.cs#L11
+            int characters = 0;
+            while (ptr[characters] != 0)
+            {
+                characters++;
+            }
+
+            return System.Text.Encoding.UTF8.GetString(ptr, characters);
         }
     }
     
@@ -327,7 +363,7 @@ public static class ImGUI
     {
         //ported from the demo
         const float padding = 10.0f;
-        var window_flags = WindowFlags.NoDecoration | WindowFlags.NoDocking | WindowFlags.AlwaysAutoResize | WindowFlags.NoSavedSettings | WindowFlags.NoFocusOnAppearing | WindowFlags.NoNav;
+        var window_flags = WindowFlags.NoDecoration | WindowFlags.AlwaysAutoResize | WindowFlags.NoSavedSettings | WindowFlags.NoFocusOnAppearing | WindowFlags.NoNav;
         var viewport = Internal.Sokol.ImGUI.igGetMainViewport();
         var work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         var work_size = viewport->WorkSize;
@@ -336,7 +372,7 @@ public static class ImGUI
         window_pos.x = (work_pos.x + padding);
         window_pos.y = (work_pos.y + padding);
         Internal.Sokol.ImGUI.igSetNextWindowPos(window_pos, (int)Condition.Always, window_pos_pivot);
-        Internal.Sokol.ImGUI.igSetNextWindowViewport(viewport->ID);
+        // Internal.Sokol.ImGUI.igSetNextWindowViewport(viewport->ID); may need to add back?
         window_flags |= WindowFlags.NoMove;
         Internal.Sokol.ImGUI.igSetNextWindowBgAlpha(0.35f);
         Begin("Zinc Stats",window_flags);

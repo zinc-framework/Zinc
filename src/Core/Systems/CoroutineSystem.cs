@@ -40,7 +40,6 @@ public class CoroutineSystem : DSystem, IUpdateSystem
                     }
                     // Otherwise, this was the last coroutine
                     cc.CompletionCallback?.Invoke();
-                    Console.WriteLine($"DESTROYING COROUTINE[{eID.ID}]: " + cc.CoroutineName);
                     completedCoroutines.Add(Engine.GetEntity(eID.ID));
                 }
                 else if(!isPaused)

@@ -26,5 +26,11 @@ public class Color
     {
         return new Color(c);
     }
+
+    public static implicit operator uint(Color c)
+    {
+        //convert internal color to uint:
+        return (uint)(c.internal_color.r * 255) << 24 | (uint)(c.internal_color.g * 255) << 16 | (uint)(c.internal_color.b * 255) << 8 | (uint)(c.internal_color.a * 255);
+    }
     
 }

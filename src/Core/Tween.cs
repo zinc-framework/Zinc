@@ -26,7 +26,7 @@ public class FloatTween : Tween<float>
     public FloatTween(float start, float end, Func<double,double> tweeningFunction) : base(start, end, tweeningFunction){}
     public override float Sample(double time)
     {
-        return Quick.MapF((float)TweenFunction(time), 0f, 1f, StartValue, TargetValue);
+        return Quick.Map((float)TweenFunction(time), 0f, 1f, StartValue, TargetValue);
     }
 }
 
@@ -37,8 +37,8 @@ public class Vector2Tween : Tween<Vector2>
     {
         var sampleTime = (float)TweenFunction(time);
         return new Vector2(
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.X, TargetValue.X),
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.Y, TargetValue.Y)
+            Quick.Map(sampleTime, 0f, 1f, StartValue.X, TargetValue.X),
+            Quick.Map(sampleTime, 0f, 1f, StartValue.Y, TargetValue.Y)
         );
     }
 }
@@ -50,10 +50,10 @@ public class ColorTween : Tween<Color>
     {
         var sampleTime = (float)TweenFunction(time);
         return new Color(
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.R, TargetValue.R),
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.G, TargetValue.G),
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.B, TargetValue.B),
-            Quick.MapF(sampleTime, 0f, 1f, StartValue.A, TargetValue.A)
+            Quick.Map(sampleTime, 0f, 1f, StartValue.R, TargetValue.R),
+            Quick.Map(sampleTime, 0f, 1f, StartValue.G, TargetValue.G),
+            Quick.Map(sampleTime, 0f, 1f, StartValue.B, TargetValue.B),
+            Quick.Map(sampleTime, 0f, 1f, StartValue.A, TargetValue.A)
         );
     }
 }

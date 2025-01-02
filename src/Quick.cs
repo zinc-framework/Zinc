@@ -32,18 +32,23 @@ public static class Quick
     //Rand unit range:
     public static Vector2 RandUnitPos(float startRadian, float endRadian)
     {
-        var radian = MapF(RandFloat(),0,1,startRadian,endRadian);
+        var radian = Map(RandFloat(),0,1,startRadian,endRadian);
         return new Vector2(
             MathF.Cos(radian),
             -MathF.Sin(radian));
     }
     
-    public static double Map(double value, double fromSource, double toSource, double fromTarget, double toTarget)
-    {
-        return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
-    }
+    // public static double Map(double value, double fromSource, double toSource, double fromTarget, double toTarget)
+    // {
+    //     return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
+    // }
     
-    public static float MapF(float value, float fromSource, float toSource, float fromTarget, float toTarget)
+    // public static float MapF(float value, float fromSource, float toSource, float fromTarget, float toTarget)
+    // {
+    //     return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
+    // }
+
+    public static T Map<T>(T value, T fromSource, T toSource, T fromTarget, T toTarget) where T: INumber<T>
     {
         return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
     }

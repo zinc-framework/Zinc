@@ -2,7 +2,7 @@ using System.Numerics;
 using Zinc.Core;
 
 namespace Zinc;
-
+[Arch.AOT.SourceGenerator.Component]
 public record struct ParticleEmitterComponent : IComponent
 {
     public int MaxParticles {get; private set;} = 1000;

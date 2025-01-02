@@ -66,6 +66,12 @@ public class SceneRenderSystem : RenderSystem
                     ref var r = ref renderEntity.ECSEntity.Get<ShapeRenderer>();
                     Engine.DrawShape(renderEntity as Anchor, r);
                 }
+
+                else if(renderEntity.ECSEntity.Has<TextRenderer>())
+                {
+                    ref var r = ref renderEntity.ECSEntity.Get<TextRenderer>();
+                    Engine.DrawText(renderEntity as Anchor, r, (renderEntity as Text).FontID);
+                }
                 
                 else if (renderEntity.ECSEntity.Has<ParticleEmitterComponent>())
                 {
@@ -109,6 +115,10 @@ public class SceneRenderSystem : RenderSystem
                     Engine.DrawParticles(renderEntity as Anchor,emitter,dt);
                 }
             }
+        }
+        unsafe
+        {
+            Zinc.Internal.Sokol.Fontstash.flush(Engine.font_state.FONSContext);
         }
     }
 }

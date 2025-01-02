@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Zinc.Internal.STB;
 using Arch.Core;
 using Zinc.Core;
-using FontStashSharp;
 using Utils = Zinc.NativeInterop.Utils;
 
 namespace Zinc;
@@ -239,29 +238,29 @@ public static partial class Engine
     }
     
     
-    public unsafe struct font_context
+    internal struct FontState
     {
-        public void* ctx;
+        public unsafe void* FONSContext;
     }
-
+    internal static FontState font_state;
     public static bool Clear = true;
 
     public static core_state state = default;
-    public static font_context font_state = default;
-    
-    public static sg_imgui_t gfx_dbgui = default;
+    public static sgimgui_t gfx_dbgui = default;
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Initialize()
     {
+        Console.WriteLine("Initializing Zinc");
         //sokol init
         sg_desc desc = default;
-        desc.context = Glue.sapp_sgcontext();
+        desc.environment = Glue.sglue_environment();
         //call our own logger
         desc.logger.func = &Sokol_Logger;
         //call native logger
         // desc.logger.func = (delegate* unmanaged[Cdecl]<sbyte*, uint, uint, sbyte*, uint, sbyte*, void*, void>)NativeLibrary.GetExport(NativeLibrary.Load("libs/sokol"), "slog_func");
         Gfx.setup(&desc);
+        Console.WriteLine("gfx setup");
 
         sgl_desc_t gl_desc = default;
         GL.setup(&gl_desc);
@@ -270,22 +269,25 @@ public static partial class Engine
         imgui_desc.logger.func = &Sokol_Logger;
         ImGUI.setup(&imgui_desc);
         
-        sg_imgui_desc_t sg_imgui_desc = default;
-        gfx_dbgui.buffers.open = 1;
-        gfx_dbgui.images.open = 1;
-        gfx_dbgui.samplers.open = 1;
-        gfx_dbgui.shaders.open = 1;
-        gfx_dbgui.pipelines.open = 1;
-        gfx_dbgui.passes.open = 1;
-        gfx_dbgui.capture.open = 1;
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        sgimgui_desc_t sg_imgui_desc = default;
+        gfx_dbgui.buffer_window.open = 1;
+        gfx_dbgui.image_window.open = 1;
+        gfx_dbgui.sampler_window.open = 1;
+        gfx_dbgui.shader_window.open = 1;
+        gfx_dbgui.pipeline_window.open = 1;
+        gfx_dbgui.attachments_window.open = 1;
+        gfx_dbgui.frame_stats_window.open = 1;
+        gfx_dbgui.capture_window.open = 1;
+        gfx_dbgui.caps_window.open = 1;
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.init(ctx,&sg_imgui_desc);
+            GfxDebugGUI.sgimgui_init(ctx,&sg_imgui_desc);
         }
 
         sgp_desc gp_desc = default;
         gp_desc.max_vertices = 1000000;
         GP.setup(&gp_desc);
+        Console.WriteLine("gp setup");
 
         sdtx_desc_t debug_text_desc = default;
         debug_text_desc.fonts[0] = DebugText.font_kc853();
@@ -327,6 +329,7 @@ public static partial class Engine
         state.checkerboard.img = Gfx.make_image(&checkerboard_desc);
         state.checkerboard.width = checkerboardTexSize;
         state.checkerboard.height = checkerboardTexSize;
+        Console.WriteLine("checkerboard setup");
         
         // ... and a sampler
         sg_sampler_desc sample_desc = default;
@@ -342,10 +345,15 @@ public static partial class Engine
         Height = App.height();
 
         ActiveSystems = new HashSet<DSystem>(DefaultSystems);
+        Console.WriteLine("systems setup");
         
+        Console.WriteLine("creating physics world");
         PhysicsWorld = new ();
+        Console.WriteLine("creating ecs world");
         ECSWorld = World.Create();
+        Console.WriteLine("creating global scene");
         GlobalScene = new(){Name = "Global Scene"};
+        Console.WriteLine("assigned global scene");
 
         
         //USE SOKOL_FONTSTASH - NOT WORKING BECAUSE CANT GENERATE FONTSTASH.H BINDINGS
@@ -365,23 +373,40 @@ public static partial class Engine
         // fontSystem = new FontSystem(settings);
         // fontSystem.AddFont(File.ReadAllBytes(@"data/fonts/hack/Hack-Bold.ttf"));
         
+        DPIScale = App.dpi_scale();
+        var atlasDim = round_pow2(512.0f * DPIScale);
+        sfons_desc_t font_desc = default;
+        font_desc.width = atlasDim;
+        font_desc.height = atlasDim;
+        font_state.FONSContext = Fontstash.create(&font_desc);
+        Console.WriteLine("fontstash setup");
+
+        
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
+        Console.WriteLine("global scene mounted");
 
         Cursor = new() { Name = "Cursor" };
 
         Events.SceneUnmounted += OnSceneUnmounted;
         Palettes.SetActivePalette(Palettes.ENDESGA);
+        Console.WriteLine("invoking setup");
         Setup?.Invoke();
+
+        //get closest power of two
+        int round_pow2(float v) {
+            uint vi = ((uint) v) - 1;
+            for (uint i = 0; i < 5; i++) {
+                vi |= (vi >> (1<<(int)i));
+            }
+            return (int) (vi + 1);
+        }
     }
-
-    public static FontSystem fontSystem;
-    public static FontstashRenderer fontRenderer = new();
-
 
 
     public static int Width;
     public static int Height;
+    public static float DPIScale;
 
     private static float angle_deg = 0;
     private static float scale = 0;
@@ -409,11 +434,13 @@ public static partial class Engine
         Width = App.width();
         Height = App.height();
 
+        Fontstash.fonsClearState(font_state.FONSContext);
+
         simgui_frame_desc_t imgui_frame = default;
         imgui_frame.width = Width;
         imgui_frame.height = Height;
         imgui_frame.delta_time = DeltaTime;
-        imgui_frame.dpi_scale = App.dpi_scale();
+        imgui_frame.dpi_scale = DPIScale;
         ImGUI.new_frame(&imgui_frame);
 
         Core.ImGUI.BeginMainMenuBar();
@@ -426,15 +453,15 @@ public static partial class Engine
             
             if (Core.ImGUI.BeginMenu("Sokol"))
             {
-                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps.open);
-                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats.open);
-                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffers.open);
-                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.images.open);
-                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.samplers.open);
-                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shaders.open);
-                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipelines.open);
-                Core.ImGUI.Checkbox("Passes", ref gfx_dbgui.passes.open);
-                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture.open);
+                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps_window.open);
+                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats_window.open);
+                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffer_window.open);
+                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.image_window.open);
+                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.sampler_window.open);
+                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shader_window.open);
+                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipeline_window.open);
+                Core.ImGUI.Checkbox("Attachments", ref gfx_dbgui.attachments_window.open);
+                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture_window.open);
                 Core.ImGUI.EndMenu();
             }
 
@@ -462,12 +489,16 @@ public static partial class Engine
             }
         }
 
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.draw(ctx);
+            GfxDebugGUI.sgimgui_draw(ctx);
         }
         
         float ratio = Width/(float)Height;
+
+        GL.defaults();
+        GL.matrix_mode_projection();
+        GL.ortho(0.0f, Width,Height, 0.0f, -100.0f, +100.0f);
 
         // Begin recording draw commands for a frame buffer of size (width, height).
         GP.begin(Width, Height);
@@ -520,7 +551,7 @@ public static partial class Engine
         { 
             DebugOverlay.Update(DeltaTime);
         }
-        
+
         // var text = "MYSTERY DUNGEON HAND";
         // var scale = new Vector2(1, 1);
         //
@@ -536,14 +567,20 @@ public static partial class Engine
 
         // setting this to load instead of clear allows us to toggle sokol_gp clearing
         state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_LOAD;
-        fixed (sg_pass_action* pass = &state.pass_action)
+        fixed (sg_pass_action* pass_ptr = &state.pass_action)
         {
-            Gfx.begin_default_pass(pass, Width, Height);
+            sg_pass pass = default;
+            pass.action = *pass_ptr;
+            pass.swapchain = Glue.sglue_swapchain();
+            // Gfx.begin_default_pass(pass, Width, Height);
+            Gfx.begin_pass(&pass);
+            // draw with sokol gl (font)
             // Dispatch all draw commands to Sokol GFX.
             GP.flush();
             // Finish a draw command queue, clearing it.
             GP.end();
             DebugText.draw();
+            GL.draw();
             ImGUI.render();
             Gfx.end_pass();
             Gfx.commit();
@@ -611,7 +648,7 @@ public static partial class Engine
 
     public static void DrawTexturedRect(Anchor a, SpriteRenderer r)
     {
-        GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
+        GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
         var world = a.GetWorldTransform();
@@ -634,25 +671,42 @@ public static partial class Engine
         GP.reset_image(0);
     }
     
-    public static void DrawText(Position p, TextRenderer r, sg_image i,sgp_rect src)
+    public static void DrawText(Anchor a, TextRenderer r, int fontID)
     {
-        //NOTE: this doesn't work!
-        GP.set_color(1.0f, 1.0f, 1.0f, 1.0f);
-        GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
-        GP.set_image(0,i);
-        GP.push_transform();
-        // GP.translate(p.X - r.PivotX,p.Y - r.PivotY);
-        // GP.rotate_at(p.Rotation, r.PivotX, r.PivotY);
-        // GP.scale_at(p.ScaleX, p.ScaleY, r.PivotX, r.PivotY);
-        GP.draw_textured_rect(0,
-            //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
-            //we assume this is the width and height of the frame itself
-            src,
-            //this is the rect index into the texture itself
-            src);
-        GP.pop_transform();
-        // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
-        GP.reset_image(0);
+        var n = System.Text.Encoding.UTF8.GetBytes(r.text);
+        unsafe
+        {
+            Fontstash.fonsSetSize(font_state.FONSContext, r.size*DPIScale);
+            Fontstash.fonsSetFont(font_state.FONSContext, fontID);
+            // Fontstash.fonsVertMetrics(font_state.FONSContext, null, null, &lh);
+            // Fontstash.fonsSetColor(font_state.FONSContext, white);
+            uint white = Fontstash.rgba(255, 255, 255, 255);
+            Fontstash.fonsSetColor(font_state.FONSContext, white);
+            Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_MIDDLE));
+            Fontstash.fonsSetSpacing(font_state.FONSContext, r.spacing*DPIScale);
+            Fontstash.fonsSetBlur(font_state.FONSContext, r.blur);
+            
+            fixed (byte* n_p = n)
+            {
+                var width = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
+                // var width = Fontstash.fonsLineBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
+                GL.push_matrix();
+                GL.translate(a.X,a.Y,0);
+                float pivotX = r.Pivot.X * width;
+                // float pivotY = r.Pivot.Y * r.Height;
+                GL.translate(-pivotX, 0,0);
+                GL.translate(pivotX, 0,0);
+                GL.rotate(a.Rotation,0,0,1);
+                GL.scale(a.ScaleX, a.ScaleY,1);
+                GL.translate(-pivotX, 0,0);
+                var dx = Fontstash.fonsDrawText(font_state.FONSContext, 0, 0, (sbyte*)n_p, null);
+                GL.pop_matrix();
+                // Console.WriteLine($"{dx} {b}");
+            }
+
+            // GL.draw();
+
+        }
     }
     
     public static void DrawShape(Anchor a, ShapeRenderer r)
@@ -780,14 +834,18 @@ public static partial class Engine
     private static unsafe void Cleanup()
     {
         Events.SceneUnmounted -= OnSceneUnmounted;
-        fixed (sg_imgui_t* ctx = &gfx_dbgui)
+        fixed (sgimgui_t* ctx = &gfx_dbgui)
         {
-            GfxDebugGUI.discard(ctx);
+            GfxDebugGUI.sgimgui_discard(ctx);
         }
         ImGUI.shutdown();
         // Gfx.destroy_image(image);
+        unsafe
+        {
+            Fontstash.destroy(font_state.FONSContext);
+        }
         GP.shutdown();
-        // GL.shutdown();
+        GL.shutdown();
         Gfx.shutdown();
     }
     

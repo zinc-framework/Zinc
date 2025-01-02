@@ -1,5 +1,6 @@
 namespace Zinc;
 
+[Arch.AOT.SourceGenerator.Component]
 public record struct SpriteAnimator() : IComponent
 {
     private HashSet<Animation> animations;

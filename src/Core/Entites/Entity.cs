@@ -104,6 +104,26 @@ public partial class Anchor : SceneObject
 {
     public Anchor? Parent {get; private set; } = null;
     private List<Anchor> children = new();
+
+    // Local position properties calculated from world position
+    public float LocalX
+    {
+        get => GetLocalPosition().X;
+        set
+        {
+            SetLocalPosition(new Vector2(value, GetLocalPosition().Y));
+        }
+    }
+
+    public float LocalY
+    {
+        get => GetLocalPosition().Y;
+        set
+        {
+            SetLocalPosition(new Vector2(GetLocalPosition().X, value));
+        }
+    }
+
     public Anchor(bool startEnabled, Scene? scene = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled,scene)
     {
@@ -124,23 +144,116 @@ public partial class Anchor : SceneObject
                 AddChild(c);
             }
         }
+
+        PositionUpdated += (float dx, float dy) => {
+            if(this.children.Count == 0)
+            {
+                return;
+            }
+            foreach (var child in this.children)
+            {
+                child.X += dx;
+                child.Y += dy;
+            }
+        };
     }
 
-    /// <summary>
+private Vector2 GetLocalPosition()
+{
+    if (Parent == null || Parent is Scene.SceneRootAnchor)
+        return new Vector2(X, Y);
+
+    var worldPos = new Vector2(X, Y);
+    var parentWorldPos = new Vector2(Parent.X, Parent.Y);
+    
+    // Get the difference between world positions
+    Vector2 offset = worldPos - parentWorldPos;
+    
+    // If parent is rotated, we need to transform the offset back to parent's local space
+    if (Parent.Rotation != 0)
+    {
+        var inverseRotation = Matrix3x2.CreateRotation(-Parent.Rotation);
+        offset = Vector2.Transform(offset, inverseRotation);
+    }
+    
+    return offset;
+}
+
+private void SetLocalPosition(Vector2 localPos)
+{
+    if (Parent == null || Parent is Scene.SceneRootAnchor)
+    {
+        X = localPos.X;
+        Y = localPos.Y;
+        return;
+    }
+
+    // Transform local position by parent's rotation
+    Vector2 rotatedLocalPos = localPos;
+    if (Parent.Rotation != 0)
+    {
+        var parentRotation = Matrix3x2.CreateRotation(Parent.Rotation);
+        rotatedLocalPos = Vector2.Transform(localPos, parentRotation);
+    }
+
+    // Set world position as parent position plus transformed local offset
+    var worldPos = new Vector2(Parent.X, Parent.Y) + rotatedLocalPos;
+    X = worldPos.X;
+    Y = worldPos.Y;
+}
+
+/// <summary>
     /// Gets the children of this anchor. 
     /// </summary>
     /// <returns>A copy of the list of children</returns>
-    public List<Anchor> GetChildren()
+    public List<Anchor> GetChildren(bool recursive = false)
     {
-        return children;
+        var result = new List<Anchor>(children);
+        if (recursive)
+        {
+            foreach (var child in children)
+            {
+                result.AddRange(child.GetChildren(true));
+            }
+        }
+        return result;
     }
 
     public void SetParent(Anchor newParent)
     {
-        Parent.children.Remove(this);
-        //TODO: figure out how to handle transfoms when changing parents
+        //TODO: update position for new parent - this is a bit tricky
+
+
+        // Don't allow parenting to null unless we're the scene root
+        newParent = newParent ?? Engine.SceneLookup[SceneID];
+        
+        // Check for recursive parenting without using GetChildren
+        if (newParent != null && newParent.IsAncestor(this))
+        {
+            Console.WriteLine("WARNING!!: RECURSIVE PARENTING DETECTED------------------");
+            Console.WriteLine($"Trying to assign parent for {Name} to: {newParent.Name}, but {Name} is already a child of {newParent.Name}");
+            Console.WriteLine("------------------");
+            return; // Prevent the invalid parent assignment
+        }
+
+        // Remove from old parent
+        Parent?.children.Remove(this);
+        
+        // Add to new parent
         newParent.children.Add(this);
         Parent = newParent;
+    }
+
+    private bool IsAncestor(Anchor potentialAncestor)
+    {
+        var current = this;
+        while (current.Parent != null && current.Parent is not Scene.SceneRootAnchor)
+        {
+            if (current.Parent == potentialAncestor)
+                return true;
+            current = current.Parent;
+        }
+        return false;
     }
 
     public Anchor AddChild(Anchor child)
@@ -163,62 +276,39 @@ public partial class Anchor : SceneObject
         base.OnDestroy();
     }
 
-    public Position LocalPosition => ECSEntity.Get<Position>();
-    // original working with transforms not scaled
-    // public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
-    // {
-    //     var (localTransform, localScale) = LocalPosition.GetLocalTransform();
+public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
+{
+    var pos = ECSEntity.Get<Position>();
+    var (rotation, _, localScale) = pos.GetTransform();
 
-    //     if (Parent != null)
-    //     {
-    //         var (parentTransform, parentScale) = Parent.GetWorldTransform();
-            
-    //         // Combine transforms and scales correctly
-    //         return (localTransform * parentTransform, 
-    //                 new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y));
-    //     }
-
-    //     return (localTransform, localScale);
-    // }
-
-    //working except for parent rotate due to scenerootachor
-    public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
+    if (Parent != null && !(Parent is Scene.SceneRootAnchor))
     {
-        var (localRotation, localTranslation, localScale) = LocalPosition.GetLocalTransform();
+        var (parentTransform, parentScale) = Parent.GetWorldTransform();
+        
+        // Get current position relative to parent's position (not transform)
+        var parentPos = new Vector2(Parent.X, Parent.Y);
+        var thisPos = new Vector2(X, Y) - parentPos;
+        
+        // Build transform in parent space
+        var translation = Matrix3x2.CreateTranslation(thisPos);
+        var localTransform = rotation * translation;
+        
+        // Transform to world space by parent
+        Matrix3x2 worldTransform = localTransform * parentTransform;
+        
+        Vector2 worldScale = new Vector2(
+            localScale.X * parentScale.X, 
+            localScale.Y * parentScale.Y
+        );
 
-        if (Parent != null && !(Parent is Scene.SceneRootAnchor))
-        {
-            var (parentTransform, parentScale) = Parent.GetWorldTransform();
-            
-            // Scale the local translation
-            Vector2 scaledTranslation = new Vector2(
-                localTranslation.X * parentScale.X,
-                localTranslation.Y * parentScale.Y
-            );
-
-            // Create a matrix for the scaled translation
-            Matrix3x2 scaledTranslationMatrix = Matrix3x2.CreateTranslation(scaledTranslation);
-
-            // Combine transforms: (ScaledTranslation * LocalRotation) * ParentTransform
-            Matrix3x2 worldTransform = (scaledTranslationMatrix * localRotation) * parentTransform;
-            
-            // Accumulate scale
-            Vector2 worldScale = new Vector2(localScale.X * parentScale.X, localScale.Y * parentScale.Y);
-
-            return (worldTransform, worldScale);
-        }
-
-        // If no parent, just combine local translation and rotation
-        Matrix3x2 localTransform = localRotation * Matrix3x2.CreateTranslation(localTranslation);
-        return (localTransform, localScale);
+        return (worldTransform, worldScale);
     }
 
-    public Vector2 GetWorldPosition()
-    {
-        GetWorldTransform().transform.Decompose(out var translation, out var rotation, out var scale);
-        // var (transform, scale) = GetWorldTransform().transform.Decompose();
-        return translation;
-    }
+    // If no parent, use world values directly
+    var worldTranslation = Matrix3x2.CreateTranslation(pos.X, pos.Y);
+    return (rotation * worldTranslation, localScale);
+}
+    
 }
 
 
