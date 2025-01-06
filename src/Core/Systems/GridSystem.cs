@@ -17,7 +17,15 @@ public class GridSystem : DSystem, IPreUpdateSystem
                 grid.ECSEntity.Get<GridComponent>().GetGridPosition(i, out var x, out var y);
                 children[i].LocalX = x;
                 children[i].LocalY = y;
-                children[i].Rotation = grid.Rotation;
+                switch (gc.RotationBehavior)
+                {
+                    case GridComponent.ChildRotationBehavior.Match:
+                        children[i].Rotation = grid.Rotation;
+                        break;
+                    case GridComponent.ChildRotationBehavior.Invert:
+                        children[i].Rotation = -grid.Rotation;
+                        break;
+                }
             }
         });
     }

@@ -24,5 +24,28 @@ public partial class Grid : SceneEntity
         }
     }
 
+    /// <summary>
+    /// This function updates grid child positions immediately instead of waiting on the system to update them.
+    /// </summary>
+    public void PushGridPositions()
+    {
+        var children = GetChildren();
+        for (int i = 0; i < children.Count; i++)
+        {
+            ECSEntity.Get<GridComponent>().GetGridPosition(i, out var x, out var y);
+            children[i].LocalX = x;
+            children[i].LocalY = y;
+            switch (RotationBehavior)
+            {
+                case GridComponent.ChildRotationBehavior.Match:
+                    children[i].Rotation = Rotation;
+                    break;
+                case GridComponent.ChildRotationBehavior.Invert:
+                    children[i].Rotation = -Rotation;
+                    break;
+            }
+        }
+    }
+
     public void GetLocalGridPosition(int index, out float x, out float y) => ECSEntity.Get<GridComponent>().GetGridPosition(index, out x, out y);
 }
