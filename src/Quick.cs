@@ -85,6 +85,12 @@ public static class Quick
         return RandFloat() * MathF.PI * 2;
     }
 
+    public static void Center(Anchor a)
+    {
+        a.X = Engine.Width/2f;
+        a.Y = Engine.Height/2f;
+    }
+
     static Func<FieldInfo,bool> DefaultFieldSkipFunction = (field) => true;
     static BindingFlags FieldBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy;
 
