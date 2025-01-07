@@ -7,7 +7,7 @@ namespace Zinc;
 public partial class Grid : SceneEntity
 {
     private readonly Action<Entity, double>? _updateWrapper;
-    public Grid(int cellWidth = 8, int cellHeight = 8, int numHorizontalCells = 4, int numVerticalCells = 4, Scene? scene = null, bool startEnabled = true, Action<Grid,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
+    public Grid(float cellWidth = 8, float cellHeight = 8, int numHorizontalCells = 4, int numVerticalCells = 4, Scene? scene = null, bool startEnabled = true, Action<Grid,double>? update = null, Anchor? parent = null, List<Anchor>? children = null)
         : base(startEnabled,scene,parent:parent,children:children)
     {
         Name = "Grid";
