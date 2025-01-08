@@ -11,6 +11,7 @@ public static class Quick
     public static int RandInt() => Random.Next();
     public static float RandFloat() => Random.NextSingle();
     public static double RandDouble() => Random.NextDouble();
+    public static Vector2 RandScreenPos() => new Vector2(RandFloat() * Engine.Width, RandFloat() * Engine.Height);
 
     public static readonly Vector2 StandardGravity = new Vector2(0,9.8f);
     public static Vector2 North => Up;
