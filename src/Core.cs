@@ -244,6 +244,7 @@ public static partial class Engine
     }
     internal static FontState font_state;
     public static bool Clear = true;
+    public static bool ShowMenu = true;
 
     public static core_state state = default;
     public static sgimgui_t gfx_dbgui = default;
@@ -443,33 +444,36 @@ public static partial class Engine
         imgui_frame.dpi_scale = DPIScale;
         ImGUI.new_frame(&imgui_frame);
 
-        Core.ImGUI.BeginMainMenuBar();
-        if (Core.ImGUI.BeginMenu("Zinc"))
+        if(ShowMenu)
         {
-            Core.ImGUI.Checkbox("Show Stats", ref showStats);
-            Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
-            Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
-            Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
-            
-            if (Core.ImGUI.BeginMenu("Sokol"))
+            Core.ImGUI.BeginMainMenuBar();
+            if (Core.ImGUI.BeginMenu("Zinc"))
             {
-                Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps_window.open);
-                Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats_window.open);
-                Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffer_window.open);
-                Core.ImGUI.Checkbox("Images", ref gfx_dbgui.image_window.open);
-                Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.sampler_window.open);
-                Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shader_window.open);
-                Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipeline_window.open);
-                Core.ImGUI.Checkbox("Attachments", ref gfx_dbgui.attachments_window.open);
-                Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture_window.open);
+                Core.ImGUI.Checkbox("Show Stats", ref showStats);
+                Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
+                Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
+                Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
+                
+                if (Core.ImGUI.BeginMenu("Sokol"))
+                {
+                    Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps_window.open);
+                    Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats_window.open);
+                    Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffer_window.open);
+                    Core.ImGUI.Checkbox("Images", ref gfx_dbgui.image_window.open);
+                    Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.sampler_window.open);
+                    Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shader_window.open);
+                    Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipeline_window.open);
+                    Core.ImGUI.Checkbox("Attachments", ref gfx_dbgui.attachments_window.open);
+                    Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture_window.open);
+                    Core.ImGUI.EndMenu();
+                }
+
                 Core.ImGUI.EndMenu();
+
             }
-
-            Core.ImGUI.EndMenu();
-
+            
+            Core.ImGUI.EndMainMenuBar();
         }
-        
-        Core.ImGUI.EndMainMenuBar();
         
         if (showStats)
         {
@@ -728,7 +732,7 @@ public static partial class Engine
         GP.pop_transform();
         GP.reset_color();
     }
-    
+
     public static void DrawParticles(Anchor a, ParticleEmitterComponent c, double dt)
     {
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);

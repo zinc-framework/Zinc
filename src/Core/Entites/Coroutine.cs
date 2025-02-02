@@ -62,10 +62,12 @@ public class WaitForSeconds : CustomYieldInstruction
 public abstract class CustomYieldWithValue<T> : CustomYieldInstruction
 {
     public Action<T>? ValueUpdated { get; set; }
-    public CustomYieldWithValue(float duration = 1.0f, Action<T>? ValueUpdated = null)
+    public Action<float>? ProgressUpdated { get; set; }
+    public CustomYieldWithValue(float duration = 1.0f, Action<T>? ValueUpdated = null,Action<float>? ProgressUpdated = null)
     {
         Duration = duration;
         this.ValueUpdated = ValueUpdated;
+        this.ProgressUpdated = ProgressUpdated;
     }
 
     public override IEnumerator Wait()
@@ -75,11 +77,13 @@ public abstract class CustomYieldWithValue<T> : CustomYieldInstruction
             if (!Paused)
             {
                 ElapsedTime += (float)Engine.DeltaTime;
+                ProgressUpdated?.Invoke(ElapsedTime/Duration);
                 ValueUpdated?.Invoke(GetSampleFromTime(ElapsedTime));
             }
             yield return null;
         }
         // Ensure we hit the final value
+        ProgressUpdated?.Invoke(1.0f);
         ValueUpdated?.Invoke(GetSampleFromTime(Duration));
     }
     protected abstract T GetSampleFromTime(double time);

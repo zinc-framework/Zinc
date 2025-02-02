@@ -30,12 +30,23 @@ public partial class Entity
         Active = startEnabled;
     }
 
-    public bool GetTags<T>(out List<T> tags)
+    public bool GetTags<T>(out List<T> tags) where T : Tag
     {
         tags = new List<T>();
         if(Tags.OfType<T>().Count() > 0)
         {
             tags = Tags.OfType<T>().ToList();
+            return true;
+        }
+        return false;
+    }
+    public bool GetTag<T>(out T? tag) where T : Tag
+    {
+        tag = default;
+        var tags = Tags.OfType<T>();
+        if(tags.Count() > 0)
+        {
+            tag = tags.First();
             return true;
         }
         return false;
@@ -221,8 +232,8 @@ private void SetLocalPosition(Vector2 localPos)
 
     public void SetParent(Anchor newParent)
     {
-        //TODO: update position for new parent - this is a bit tricky
-
+        var oldX = LocalX;
+        var oldY = LocalY;
 
         // Don't allow parenting to null unless we're the scene root
         newParent = newParent ?? Engine.SceneLookup[SceneID];
@@ -242,6 +253,10 @@ private void SetLocalPosition(Vector2 localPos)
         // Add to new parent
         newParent.children.Add(this);
         Parent = newParent;
+        
+        // update pos based on new parent
+        LocalX = oldX;
+        LocalY = oldY;
     }
 
     private bool IsAncestor(Anchor potentialAncestor)
@@ -260,6 +275,15 @@ private void SetLocalPosition(Vector2 localPos)
     {
         child.SetParent(this);
         return child;
+    }
+
+    public List<Anchor> AddChildren(List<Anchor> children)
+    {
+        foreach (var c in children)
+        {
+            AddChild(c);
+        }
+        return children;
     }
 
     protected override void OnDestroy()
@@ -318,8 +342,8 @@ public partial class SceneEntity : Anchor
     public SceneEntity(bool startEnabled, Scene? scene = null, Action<Entity, double>? update = null, Anchor? parent = null, List<Anchor>? children = null) 
         : base(startEnabled, scene, parent,children)
     {
-        X = Engine.Width/2f;
-        Y = Engine.Height/2f;
+        X = 0;
+        Y = 0;
         Update = update;
     }
 }
