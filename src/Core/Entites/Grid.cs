@@ -33,8 +33,8 @@ public partial class Grid : SceneEntity
         for (int i = 0; i < children.Count; i++)
         {
             ECSEntity.Get<GridComponent>().GetGridPosition(i, out var x, out var y);
-            children[i].LocalX = x;
-            children[i].LocalY = y;
+            children[i].X = x;
+            children[i].Y = y;
             switch (RotationBehavior)
             {
                 case GridComponent.ChildRotationBehavior.Match:
