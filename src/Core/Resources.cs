@@ -64,6 +64,11 @@ public static class Resources
             //note if you set width/height we believe you
             return new Rect(0, 0, Width, Height);
         }
+
+        public SpriteData Slice(Rect rect)
+        {
+            return new SpriteData(this, rect);
+        }
     }
 }
 
