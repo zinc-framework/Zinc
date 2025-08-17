@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Zinc</AssemblyName>
     <RootNamespace>Zinc</RootNamespace>
-    <LangVersion>default</LangVersion>
+    <LangVersion>preview</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 

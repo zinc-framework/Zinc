@@ -3,23 +3,21 @@ namespace Zinc;
 [Arch.AOT.SourceGenerator.Component]
 public record struct SpriteAnimator() : IComponent
 {
-    private HashSet<Animation> animations;
     public HashSet<Animation> Animations 
-    { 
-        get => animations; 
+    {
+        get;
         set
         {
-            animations = value;
-            CurrentAnimation = Animations.First();  
+            field = value;
+            CurrentAnimation = field.First();  
         } 
     }
-    private Animation currentAnimation;
     public Animation CurrentAnimation
     {
-        get => currentAnimation;
+        get;
         set
         {
-            currentAnimation = value;
+            field = value;
             animationIndex = 0;
             AnimationTime = 0f;
         }
