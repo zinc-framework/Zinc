@@ -27,6 +27,7 @@ public partial class InputSystem : DSystem, IUpdateSystem
 
     public static partial class Events
     {
+#pragma warning disable CS8618
         //could definitely source generate this
         [KeyBinding(Zinc.Key.SPACE)]
         public static class SPACE
@@ -988,5 +989,7 @@ public partial class InputSystem : DSystem, IUpdateSystem
             [KeyState(KeyState.Pressed)] public static Action<List<Modifiers>> Pressed;
             [KeyState(KeyState.Any)] public static Action<KeyState,List<Modifiers>> Event;
         }
+#pragma warning restore CS8618
+
     }
 }
