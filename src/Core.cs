@@ -689,20 +689,21 @@ public static partial class Engine
             Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_MIDDLE));
             Fontstash.fonsSetSpacing(font_state.FONSContext, r.spacing*DPIScale);
             Fontstash.fonsSetBlur(font_state.FONSContext, r.blur);
-            
+
+            var world = a.GetWorldTransform();
+            world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
+
             fixed (byte* n_p = n)
             {
                 var width = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
                 // var width = Fontstash.fonsLineBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
                 GL.push_matrix();
-                GL.translate(a.X,a.Y,0);
                 float pivotX = r.Pivot.X * width;
                 // float pivotY = r.Pivot.Y * r.Height;
-                GL.translate(-pivotX, 0,0);
-                GL.translate(pivotX, 0,0);
-                GL.rotate(a.Rotation,0,0,1);
-                GL.scale(a.ScaleX, a.ScaleY,1);
-                GL.translate(-pivotX, 0,0);
+                GL.translate(world_pos.X, world_pos.Y, 0);
+                GL.translate(-pivotX, 0, 0);
+                GL.rotate(world_rotation, 0, 0, 1);
+                GL.scale(world.scale.X, world.scale.Y, 1);
                 var dx = Fontstash.fonsDrawText(font_state.FONSContext, 0, 0, (sbyte*)n_p, null);
                 GL.pop_matrix();
                 // Console.WriteLine($"{dx} {b}");
