@@ -689,7 +689,6 @@ public static partial class Engine
             Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_MIDDLE));
             Fontstash.fonsSetSpacing(font_state.FONSContext, r.spacing*DPIScale);
             Fontstash.fonsSetBlur(font_state.FONSContext, r.blur);
-
             var world = a.GetWorldTransform();
             world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
 
@@ -699,7 +698,6 @@ public static partial class Engine
                 // var width = Fontstash.fonsLineBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
                 GL.push_matrix();
                 float pivotX = r.Pivot.X * width;
-                // float pivotY = r.Pivot.Y * r.Height;
                 GL.translate(world_pos.X, world_pos.Y, 0);
                 GL.translate(-pivotX, 0, 0);
                 GL.rotate(world_rotation, 0, 0, 1);

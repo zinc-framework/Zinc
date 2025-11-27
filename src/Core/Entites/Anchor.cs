@@ -34,7 +34,9 @@ public partial class Anchor : SceneObject
         {
             foreach (var c in children)
             {
-                AddChild(c);
+                // Don't preserve world position - children passed to constructor
+                // should keep their local positions relative to this new parent
+                AddChild(c, preserveWorldPosition: false);
             }
         }
     }
@@ -56,11 +58,11 @@ public partial class Anchor : SceneObject
         return result;
     }
 
-    public void SetParent(Anchor newParent)
+    public void SetParent(Anchor newParent, bool preserveWorldPosition = true)
     {
         // Don't allow parenting to null unless we're the scene root
         newParent = newParent ?? Engine.SceneLookup[SceneID];
-        
+
         // Check for recursive parenting
         if (newParent != null && newParent.IsAncestor(this))
         {
@@ -70,29 +72,38 @@ public partial class Anchor : SceneObject
             return;
         }
 
-        // Capture current world state
-        var worldPos = GetWorldPosition();
-        var pos = ECSEntity.Get<Position>();
-        var currentRotation = pos.Rotation;  // Store current world rotation
-        
+        // Capture current world state (only needed if preserving)
+        Vector2 worldPos = default;
+        float currentRotation = 0;
+        if (preserveWorldPosition)
+        {
+            worldPos = GetWorldPosition();
+            var pos = ECSEntity.Get<Position>();
+            currentRotation = pos.Rotation;
+        }
+
         // Remove from old parent
         Parent?.children.Remove(this);
-        
+
         // Add to new parent
         newParent.children.Add(this);
         Parent = newParent;
-        
-        // Calculate new local rotation
-        if (Parent != null && !(Parent is Scene.SceneRootAnchor))
+
+        if (preserveWorldPosition)
         {
-            var parentRotation = Parent.ECSEntity.Get<Position>().Rotation;
-            // Adjust local rotation to maintain world rotation
-            pos.Rotation = currentRotation - parentRotation;
+            // Calculate new local rotation
+            if (Parent != null && !(Parent is Scene.SceneRootAnchor))
+            {
+                var parentRotation = Parent.ECSEntity.Get<Position>().Rotation;
+                ref var pos = ref ECSEntity.Get<Position>();
+                // Adjust local rotation to maintain world rotation
+                pos.Rotation = currentRotation - parentRotation;
+            }
+
+            // Set position in new parent's space
+            // This will handle any necessary rotation transformations
+            SetWorldPosition(worldPos.X, worldPos.Y);
         }
-        
-        // Set position in new parent's space
-        // This will handle any necessary rotation transformations
-        SetWorldPosition(worldPos.X, worldPos.Y);
     }
 
     private bool IsAncestor(Anchor potentialAncestor)
@@ -107,9 +118,9 @@ public partial class Anchor : SceneObject
         return false;
     }
 
-    public Anchor AddChild(Anchor child)
+    public Anchor AddChild(Anchor child, bool preserveWorldPosition = true)
     {
-        child.SetParent(this);
+        child.SetParent(this, preserveWorldPosition);
         return child;
     }
 
