@@ -89,4 +89,40 @@ public abstract class CustomYieldWithValue<T> : CustomYieldInstruction
     protected abstract T GetSampleFromTime(double time);
 }
 
+// Wait until a condition is true
+public class WaitUntil : CustomYieldInstruction
+{
+    private readonly Func<bool> _condition;
 
+    public WaitUntil(Func<bool> condition)
+    {
+        _condition = condition;
+    }
+
+    public override IEnumerator Wait()
+    {
+        while (!_condition())
+        {
+            yield return null;
+        }
+    }
+}
+
+// Wait while a condition is true
+public class WaitWhile : CustomYieldInstruction
+{
+    private readonly Func<bool> _condition;
+
+    public WaitWhile(Func<bool> condition)
+    {
+        _condition = condition;
+    }
+
+    public override IEnumerator Wait()
+    {
+        while (_condition())
+        {
+            yield return null;
+        }
+    }
+}
