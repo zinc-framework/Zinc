@@ -677,16 +677,18 @@ public static partial class Engine
     
     public static void DrawText(Anchor a, TextRenderer r, int fontID)
     {
-        var n = System.Text.Encoding.UTF8.GetBytes(r.text);
+        var n = System.Text.Encoding.UTF8.GetBytes(r.text + '\0'); // null terminate
         unsafe
         {
             Fontstash.fonsSetSize(font_state.FONSContext, r.size*DPIScale);
             Fontstash.fonsSetFont(font_state.FONSContext, fontID);
-            // Fontstash.fonsVertMetrics(font_state.FONSContext, null, null, &lh);
-            // Fontstash.fonsSetColor(font_state.FONSContext, white);
+            
+            float ascender, descender, lineHeight;
+            Fontstash.fonsVertMetrics(font_state.FONSContext, &ascender, &descender, &lineHeight);
+            
             uint white = Fontstash.rgba(255, 255, 255, 255);
             Fontstash.fonsSetColor(font_state.FONSContext, white);
-            Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_MIDDLE));
+            Fontstash.fonsSetAlign(font_state.FONSContext, (int)(FONSalign.FONS_ALIGN_BASELINE | FONSalign.FONS_ALIGN_LEFT));
             Fontstash.fonsSetSpacing(font_state.FONSContext, r.spacing*DPIScale);
             Fontstash.fonsSetBlur(font_state.FONSContext, r.blur);
             var world = a.GetWorldTransform();
@@ -694,21 +696,82 @@ public static partial class Engine
 
             fixed (byte* n_p = n)
             {
-                var width = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
-                // var width = Fontstash.fonsLineBounds(font_state.FONSContext, 0, 0, (sbyte*)n_p, null, null);
+                // First pass: calculate total dimensions
+                float maxWidth = 0;
+                int lineCount = 0;
+                byte* start = n_p;
+                byte* end = n_p;
+                
+                while (*end != 0)
+                {
+                    if (*end == '\r' || *end == '\n')
+                    {
+                        if (end > start)
+                        {
+                            var lineWidth = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)start, (sbyte*)end, null);
+                            if (lineWidth > maxWidth) maxWidth = lineWidth;
+                        }
+                        lineCount++;
+                        end++;
+                        // handle cr-lf and lf-cr
+                        if (*end == '\r' || *end == '\n') end++;
+                        start = end;
+                    }
+                    else
+                    {
+                        end++;
+                    }
+                }
+                // Handle last line
+                if (end > start)
+                {
+                    var lineWidth = Fontstash.fonsTextBounds(font_state.FONSContext, 0, 0, (sbyte*)start, (sbyte*)end, null);
+                    if (lineWidth > maxWidth) maxWidth = lineWidth;
+                    lineCount++;
+                }
+                
+                float totalHeight = lineCount * lineHeight;
+                float pivotX = r.Pivot.X * maxWidth;
+                float pivotY = r.Pivot.Y * totalHeight;
+                
                 GL.push_matrix();
-                float pivotX = r.Pivot.X * width;
                 GL.translate(world_pos.X, world_pos.Y, 0);
-                GL.translate(-pivotX, 0, 0);
+                GL.translate(-pivotX, -pivotY, 0);
                 GL.rotate(world_rotation, 0, 0, 1);
                 GL.scale(world.scale.X, world.scale.Y, 1);
-                var dx = Fontstash.fonsDrawText(font_state.FONSContext, 0, 0, (sbyte*)n_p, null);
+                
+                // Second pass: draw text
+                float y = ascender; // start at baseline of first line
+                start = n_p;
+                end = n_p;
+                
+                while (*end != 0)
+                {
+                    if (*end == '\r' || *end == '\n')
+                    {
+                        if (end > start)
+                        {
+                            Fontstash.fonsDrawText(font_state.FONSContext, 0, y, (sbyte*)start, (sbyte*)end);
+                        }
+                        y += lineHeight;
+                        end++;
+                        // handle cr-lf and lf-cr
+                        if (*end == '\r' || *end == '\n') end++;
+                        start = end;
+                    }
+                    else
+                    {
+                        end++;
+                    }
+                }
+                // Handle last line
+                if (end > start)
+                {
+                    Fontstash.fonsDrawText(font_state.FONSContext, 0, y, (sbyte*)start, (sbyte*)end);
+                }
+                
                 GL.pop_matrix();
-                // Console.WriteLine($"{dx} {b}");
             }
-
-            // GL.draw();
-
         }
     }
     

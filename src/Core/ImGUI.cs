@@ -201,7 +201,7 @@ public static class ImGUI
         }
     }
 
-    public static unsafe void DragFloat(string label, ref float value, float speed, float min, float max, string format, SliderFlags flags)
+    public static unsafe void DragFloat(string label, ref float value, float speed, float min, float max, string format, SliderFlags flags = Core.ImGUI.SliderFlags.None)
     {
         var t = System.Text.Encoding.UTF8.GetBytes(label);
         var f = System.Text.Encoding.UTF8.GetBytes(format);
@@ -225,7 +225,7 @@ public static class ImGUI
         }
     }
     
-    public static unsafe bool SliderFloat2(string label, ref float value1, ref float value2, float min, float max, string format, SliderFlags flags)
+    public static unsafe bool SliderFloat2(string label, ref float value1, ref float value2, float min, float max, string format, SliderFlags flags = Core.ImGUI.SliderFlags.None)
     {
         var t = System.Text.Encoding.UTF8.GetBytes(label);
         var f = System.Text.Encoding.UTF8.GetBytes(format);
@@ -243,7 +243,7 @@ public static class ImGUI
         }
     }
     
-    public static unsafe bool SliderInt(string label, ref int value, int min, int max, string format, SliderFlags flags)
+    public static unsafe bool SliderInt(string label, ref int value, int min, int max, string format, SliderFlags flags = Core.ImGUI.SliderFlags.None)
     {
         var t = System.Text.Encoding.UTF8.GetBytes(label);
         var f = System.Text.Encoding.UTF8.GetBytes(format);
