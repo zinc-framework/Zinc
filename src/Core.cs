@@ -188,6 +188,7 @@ public static partial class Engine
     private static unsafe void Event(sapp_event* e)
     {
         sapp_event ev = *e;
+        AppDebugGUI.track_event(e);
          if (ImGUI.handle_event(e) > 0)
          {
              /*
@@ -247,7 +248,12 @@ public static partial class Engine
     public static bool ShowMenu = true;
 
     public static core_state state = default;
-    public static sgimgui_t gfx_dbgui = default;
+
+    // Cached UTF-8 menu titles for the sokol debug overlays. Allocating these
+    // on every frame inside Frame() was creating per-tick GC pressure that
+    // showed up as growing UI input lag after a few seconds of mouse motion.
+    private static readonly byte[] _sokolGfxMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-gfx\0");
+    private static readonly byte[] _sokolAppMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-app\0");
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Initialize()
@@ -271,19 +277,8 @@ public static partial class Engine
         ImGUI.setup(&imgui_desc);
         
         sgimgui_desc_t sg_imgui_desc = default;
-        gfx_dbgui.buffer_window.open = 1;
-        gfx_dbgui.image_window.open = 1;
-        gfx_dbgui.sampler_window.open = 1;
-        gfx_dbgui.shader_window.open = 1;
-        gfx_dbgui.pipeline_window.open = 1;
-        gfx_dbgui.attachments_window.open = 1;
-        gfx_dbgui.frame_stats_window.open = 1;
-        gfx_dbgui.capture_window.open = 1;
-        gfx_dbgui.caps_window.open = 1;
-        fixed (sgimgui_t* ctx = &gfx_dbgui)
-        {
-            GfxDebugGUI.sgimgui_init(ctx,&sg_imgui_desc);
-        }
+        GfxDebugGUI.sgimgui_setup(&sg_imgui_desc);
+        AppDebugGUI.setup();
 
         sgp_desc gp_desc = default;
         gp_desc.max_vertices = 1000000;
@@ -326,7 +321,7 @@ public static partial class Engine
         var checkerboard_desc = default(sg_image_desc);
         checkerboard_desc.width = checkerboardTexSize;
         checkerboard_desc.height = checkerboardTexSize;
-        checkerboard_desc.data.subimage.e0_0 = pixels.AsSgRange();
+        checkerboard_desc.data.mip_levels[0] = pixels.AsSgRange();
         state.checkerboard.img = Gfx.make_image(&checkerboard_desc);
         state.checkerboard.width = checkerboardTexSize;
         state.checkerboard.height = checkerboardTexSize;
@@ -425,6 +420,7 @@ public static partial class Engine
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Frame()
     {
+        AppDebugGUI.track_frame();
         FrameCount = App.frame_count();
         DeltaTime = App.frame_duration();
         Time += DeltaTime;
@@ -453,25 +449,19 @@ public static partial class Engine
                 Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
                 Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
                 Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
-                
-                if (Core.ImGUI.BeginMenu("Sokol"))
-                {
-                    Core.ImGUI.Checkbox("Capabilities", ref gfx_dbgui.caps_window.open);
-                    Core.ImGUI.Checkbox("Frame Stats", ref gfx_dbgui.frame_stats_window.open);
-                    Core.ImGUI.Checkbox("Buffers", ref gfx_dbgui.buffer_window.open);
-                    Core.ImGUI.Checkbox("Images", ref gfx_dbgui.image_window.open);
-                    Core.ImGUI.Checkbox("Samplers", ref gfx_dbgui.sampler_window.open);
-                    Core.ImGUI.Checkbox("Shaders", ref gfx_dbgui.shader_window.open);
-                    Core.ImGUI.Checkbox("Pipelines", ref gfx_dbgui.pipeline_window.open);
-                    Core.ImGUI.Checkbox("Attachments", ref gfx_dbgui.attachments_window.open);
-                    Core.ImGUI.Checkbox("Capture", ref gfx_dbgui.capture_window.open);
-                    Core.ImGUI.EndMenu();
-                }
-
                 Core.ImGUI.EndMenu();
-
             }
-            
+
+            fixed (byte* sm_ptr = _sokolGfxMenuTitle)
+            {
+                GfxDebugGUI.sgimgui_draw_menu((sbyte*)sm_ptr);
+            }
+
+            fixed (byte* am_ptr = _sokolAppMenuTitle)
+            {
+                AppDebugGUI.draw_menu((sbyte*)am_ptr);
+            }
+
             Core.ImGUI.EndMainMenuBar();
         }
         
@@ -493,11 +483,9 @@ public static partial class Engine
             }
         }
 
-        fixed (sgimgui_t* ctx = &gfx_dbgui)
-        {
-            GfxDebugGUI.sgimgui_draw(ctx);
-        }
-        
+        GfxDebugGUI.sgimgui_draw();
+        AppDebugGUI.draw();
+
         float ratio = Width/(float)Height;
 
         GL.defaults();
@@ -581,12 +569,8 @@ public static partial class Engine
             sg_pass pass = default;
             pass.action = *pass_ptr;
             pass.swapchain = Glue.sglue_swapchain();
-            // Gfx.begin_default_pass(pass, Width, Height);
             Gfx.begin_pass(&pass);
-            // draw with sokol gl (font)
-            // Dispatch all draw commands to Sokol GFX.
             GP.flush();
-            // Finish a draw command queue, clearing it.
             GP.end();
             DebugText.draw();
             GL.draw();
@@ -594,7 +578,7 @@ public static partial class Engine
             Gfx.end_pass();
             Gfx.commit();
         }
-        
+
         foreach (var s in ActiveSystems)
         {
             if (s is ICleanupSystem cs)
@@ -602,7 +586,7 @@ public static partial class Engine
                 cs.Cleanup();
             }
         }
-        
+
         DestructionSystem.DestroyObjects();
 
         if (hasScenesStagedForUnmounting)
@@ -905,10 +889,8 @@ public static partial class Engine
     private static unsafe void Cleanup()
     {
         Events.SceneUnmounted -= OnSceneUnmounted;
-        fixed (sgimgui_t* ctx = &gfx_dbgui)
-        {
-            GfxDebugGUI.sgimgui_discard(ctx);
-        }
+        GfxDebugGUI.sgimgui_shutdown();
+        AppDebugGUI.shutdown();
         ImGUI.shutdown();
         // Gfx.destroy_image(image);
         unsafe
@@ -965,8 +947,8 @@ public static partial class Engine
                 stb_img_desc.height = imgy;
                 stb_img_desc.pixel_format = sg_pixel_format.SG_PIXELFORMAT_RGBA8;
                 
-                stb_img_desc.data.subimage.e0_0.ptr = stbimg;
-                stb_img_desc.data.subimage.e0_0.size = (nuint)(imgx * imgy * 4);
+                stb_img_desc.data.mip_levels[0].ptr = stbimg;
+                stb_img_desc.data.mip_levels[0].size = (nuint)(imgx * imgy * 4);
 
                 img = Gfx.make_image(&stb_img_desc);
                 STB.stbi_image_free(stbimg);
