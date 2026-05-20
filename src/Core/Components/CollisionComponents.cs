@@ -17,6 +17,12 @@ public record CollisionEvent(int entity1ManagedID, int entity2ManagedID);
 [Arch.AOT.SourceGenerator.Component]
 public record struct Collider(float Width, float Height, Vector2 Pivot,
     bool Active = false,
+    // When true, the collider is a point: Width/Height/Pivot are ignored and the
+    // entity's Position is treated as the collider. Point-vs-polygon collisions
+    // route through Box2D's b2PointInPolygon (no b2ComputeHull path, so it sidesteps
+    // the LINEAR_SLOP welding failures that bite tiny polygon colliders).
+    // Point-vs-point pairs never report a collision.
+    bool IsPoint = false,
     Action<Entity, Entity> OnStart = null,
     Action<Entity, Entity> OnContinue = null,
     Action<Entity, Entity> OnEnd = null,

@@ -10,9 +10,7 @@ public partial class Pointer : Entity
     private readonly Action<Entity, double>? _updateWrapper;
     public Pointer(bool startEnabled = true, Action<Pointer, double>? update = null) : base(startEnabled)
     {
-        Collider_Pivot = new System.Numerics.Vector2(0.5f);
-        Collider_Width = 1;
-        Collider_Height = 1;
+        Collider_IsPoint = true;
         Collider_Active = true;
         if (update != null)
         {

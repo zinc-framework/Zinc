@@ -109,10 +109,11 @@ public class CollisionSystem : DSystem, IUpdateSystem
     QueryDescription activeColliders = new QueryDescription().WithAll<ActiveState,EntityID,Collider,Position>().WithNone<Destroy>();
     QueryDescription colQuery = new QueryDescription().WithAll<EventMeta,CollisionMeta,CollisionEvent>();
     private List<(Arch.Core.Entity e,Collider c,int managedID)> colliders = new();
-    
+
     private Dictionary<int, CollisionEvent> bufferedCollisionEvents = new();
     Entity entity1 = null;
     Entity entity2 = null;
+
     public void Update(double dt)
     {
         colliders.Clear();
@@ -123,19 +124,14 @@ public class CollisionSystem : DSystem, IUpdateSystem
         {
             e.Get<Collider>().ActiveCollisions.Clear(); //we clear active collisions here each frame, even if collider is inactive
             if(!c.Active || !a.Active){return;}
-            //this checks for collisions between all active colliders
-            //could be optimized to only check against colliders in the same scene / layer / etc
+            // Pairwise test against every previously gathered active collider.
+            // The Collision.CheckCollision dispatch handles point/polygon mixing
+            // via Collider.IsPoint internally.
             for (int i = 0; i < colliders.Count; i++)
             {
                 if (e.Id != colliders[i].e.Id  && Zinc.Collision.CheckCollision(managedID.ID,c,colliders[i].managedID,colliders[i].c))
                 {
-                    entity1 =  Engine.GetEntity(managedID.ID);
-                    entity2 =  Engine.GetEntity(colliders[i].managedID);
-                    //we hash off managed entity IDs, as these never repeat or recycle
-                    //hash order is from lowest to highest ID
-                    var hash = entity1.ID > entity2.ID ? HashCode.Combine(entity2.ID, entity1.ID) : HashCode.Combine(entity1.ID, entity2.ID);
-                    var ce = new CollisionEvent(managedID.ID,colliders[i].managedID);
-                    bufferedCollisionEvents.TryAdd(hash,ce);
+                    BufferCollision(managedID.ID, colliders[i].managedID);
                 }
             }
             colliders.Add((e,c,managedID.ID));
@@ -175,8 +171,8 @@ public class CollisionSystem : DSystem, IUpdateSystem
                 }
             }
         });
-        
-        
+
+
         Zinc.Entity e1,e2;
         foreach (var e in bufferedCollisionEvents)
         {
@@ -189,5 +185,14 @@ public class CollisionSystem : DSystem, IUpdateSystem
                 new CollisionMeta(e.Key),
                 e.Value);
         }
+    }
+
+    private void BufferCollision(int managedIdA, int managedIdB)
+    {
+        entity1 = Engine.GetEntity(managedIdA);
+        entity2 = Engine.GetEntity(managedIdB);
+        // Hash on managed entity IDs (never recycled), order-insensitive.
+        var hash = entity1.ID > entity2.ID ? HashCode.Combine(entity2.ID, entity1.ID) : HashCode.Combine(entity1.ID, entity2.ID);
+        bufferedCollisionEvents.TryAdd(hash, new CollisionEvent(managedIdA, managedIdB));
     }
 }

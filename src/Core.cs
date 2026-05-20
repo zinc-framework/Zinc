@@ -76,7 +76,7 @@ public static partial class Engine
     }
 
     public static uint idCounter;
-    public static Volatile.VoltWorld PhysicsWorld;
+    public static PhysicsWorld PhysicsWorld;
     public static World ECSWorld;
     public static Scene GlobalScene;
     public static Pointer Cursor;
@@ -530,7 +530,12 @@ public static partial class Engine
                 us.PreUpdate(DeltaTime);
             }
         }
-        PhysicsWorld.Update();
+        // Use the unfiltered frame duration for the physics accumulator. After
+        // the Apr-2026 sokol_app changelog, `App.frame_duration()` returns an
+        // EMA-smoothed value (great for animation/UI dt, bad for a fixed-step
+        // accumulator — the filter lags real spikes, and the 0.25s clamp in
+        // PhysicsWorld.Update is meant to act on the *raw* wall-clock dt).
+        PhysicsWorld.Update(App.frame_duration_unfiltered());
         Update?.Invoke();
         EntityUpdate.Update(DeltaTime);
         foreach (var s in ActiveSystems)
