@@ -6,7 +6,7 @@ namespace Zinc.Core;
 public static class ImGUI
 {
     [Flags]
-    public enum WindowFlags
+    public enum WindowFlags : uint
     {
         None = ImGuiWindowFlags_.ImGuiWindowFlags_None,
         NoTitleBar = ImGuiWindowFlags_.ImGuiWindowFlags_NoTitleBar,
@@ -39,7 +39,7 @@ public static class ImGUI
     }
 
     [Flags]
-    public enum SliderFlags
+    public enum SliderFlags : uint
     {
         None = ImGuiSliderFlags_.ImGuiSliderFlags_None,
         AlwaysClamp = ImGuiSliderFlags_.ImGuiSliderFlags_AlwaysClamp,
@@ -50,7 +50,7 @@ public static class ImGUI
     }
 
     [Flags]
-    public enum InputFlags
+    public enum InputFlags : uint
     {
         None = ImGuiInputFlags_.ImGuiInputFlags_None,
         Repeat = ImGuiInputFlags_.ImGuiInputFlags_Repeat,
@@ -66,7 +66,7 @@ public static class ImGUI
     }
 
     [Flags]
-    public enum Condition
+    public enum Condition : uint
     {
         None = ImGuiCond_.ImGuiCond_None,
         Always = ImGuiCond_.ImGuiCond_Always,
@@ -88,7 +88,7 @@ public static class ImGUI
         var b = System.Text.Encoding.UTF8.GetBytes(name);
         fixed (byte* ptr = b)
         {
-            return Internal.Sokol.ImGUI.igBeginMenu((sbyte*)ptr,(byte)(enabled ? 1 : 0)) > 0;
+            return Internal.Sokol.ImGUI.igBeginMenuEx((sbyte*)ptr,(byte)(enabled ? 1 : 0)) > 0;
         }
     }
     public static void EndMenu() => Internal.Sokol.ImGUI.igEndMenu();
@@ -98,12 +98,12 @@ public static class ImGUI
     }
     public static void SetNextWindowPosition(float x, float y, Condition condition, float pivot_x, float pivot_y)
     {
-        Internal.Sokol.ImGUI.igSetNextWindowPos(new(){x = x, y=y}, (int)condition, new ImVec2(){x = pivot_x,y=pivot_y});
+        Internal.Sokol.ImGUI.igSetNextWindowPosEx(new(){x = x, y=y}, (int)condition, new ImVec2_t(){x = pivot_x,y=pivot_y});
     }
     public static void SetNextWindowSize(Vector2 size, Condition condition = Condition.Always) => SetNextWindowSize(size.X,size.Y,condition);
     public static unsafe void SetNextWindowSize(float width, float height, Condition condition = Condition.Always)
     {
-        Internal.Sokol.ImGUI.igSetNextWindowSize(new ImVec2(){x =width,y=height},(int)condition);
+        Internal.Sokol.ImGUI.igSetNextWindowSize(new ImVec2_t(){x =width,y=height},(int)condition);
     }
     
     public static void SetNextWindowBGAlpha(float alpha)
@@ -132,7 +132,7 @@ public static class ImGUI
         var s = System.Text.Encoding.UTF8.GetBytes(shortcut);
         fixed (byte* n_p = n, s_p = s)
         {
-            return Internal.Sokol.ImGUI.igMenuItem_Bool((sbyte*)n_p,(sbyte*)s_p,(byte)(selected ? 1 : 0),(byte)(enabled ? 1 : 0)) > 0;
+            return Internal.Sokol.ImGUI.igMenuItemEx((sbyte*)n_p,(sbyte*)s_p,(byte)(selected ? 1 : 0),(byte)(enabled ? 1 : 0)) > 0;
         }
     }
 
@@ -165,7 +165,7 @@ public static class ImGUI
         var t = System.Text.Encoding.UTF8.GetBytes(text);
         fixed (byte* t_p = t)
         {
-            Internal.Sokol.ImGUI.igText((sbyte*)t_p);
+            Internal.Sokol.ImGUI.igTextUnformatted((sbyte*)t_p);
         }
     }
 
@@ -175,7 +175,7 @@ public static class ImGUI
         var v = System.Text.Encoding.UTF8.GetBytes(string.IsNullOrEmpty(value) ? " " : value);
         fixed (byte* t_p = t, v_p = v)
         {
-            Internal.Sokol.ImGUI.igInputText((sbyte*)t_p, (sbyte*)v_p, maxLength, (int)flags, null, null);
+            Internal.Sokol.ImGUI.igInputTextEx((sbyte*)t_p, (sbyte*)v_p, maxLength, (int)flags, null, null);
             value = StringFromPtr(v_p);
         }
 
@@ -208,7 +208,7 @@ public static class ImGUI
         float v = value;
         fixed (byte* t_p = t,fmt_p = f)
         {
-            Internal.Sokol.ImGUI.igDragFloat((sbyte*)t_p, &v, speed, min, max, (sbyte*)fmt_p, (int)flags);
+            Internal.Sokol.ImGUI.igDragFloatEx((sbyte*)t_p, &v, speed, min, max, (sbyte*)fmt_p, (int)flags);
             value = v;
         }
     }
@@ -219,7 +219,7 @@ public static class ImGUI
         float v = value;
         fixed (byte* t_p = t,fmt_p = f)
         {
-            var r = Internal.Sokol.ImGUI.igSliderFloat((sbyte*)t_p, &v, min, max, (sbyte*)fmt_p, (int)flags);
+            var r = Internal.Sokol.ImGUI.igSliderFloatEx((sbyte*)t_p, &v, min, max, (sbyte*)fmt_p, (int)flags);
             value = v;
             return r != 0;
         }
@@ -234,7 +234,7 @@ public static class ImGUI
         {
             fixed (float* vptr = v_arr)
             {
-                var r = Internal.Sokol.ImGUI.igSliderFloat2((sbyte*)t_p, vptr, min, max, (sbyte*)fmt_p, (int)flags);
+                var r = Internal.Sokol.ImGUI.igSliderFloat2Ex((sbyte*)t_p, vptr, min, max, (sbyte*)fmt_p, (int)flags);
                 value1 = v_arr[0];
                 value2 = v_arr[1];
                 return r != 0;
@@ -250,7 +250,7 @@ public static class ImGUI
         int v = value;
         fixed (byte* t_p = t,fmt_p = f)
         {
-            var r = Internal.Sokol.ImGUI.igSliderInt((sbyte*)t_p, &v, min, max, (sbyte*)fmt_p, (int)flags);
+            var r = Internal.Sokol.ImGUI.igSliderIntEx((sbyte*)t_p, &v, min, max, (sbyte*)fmt_p, (int)flags);
             value = v;
             return r != 0;
         }
@@ -262,19 +262,19 @@ public static class ImGUI
         int v = value;
         fixed (byte* ptr = b)
         {
-            var r = Internal.Sokol.ImGUI.igRadioButton_IntPtr((sbyte*)ptr,&v,optionIndex);
+            var r = Internal.Sokol.ImGUI.igRadioButtonIntPtr((sbyte*)ptr,&v,optionIndex);
             value = v;
             return r != 0;
         }
     }
 
     public static void Button(string label, Vector2 size, Action OnClick) => Button(label, size.ToImVec2(),OnClick);
-    public static unsafe void Button(string label, ImVec2 size, Action OnClick)
+    public static unsafe void Button(string label, ImVec2_t size, Action OnClick)
     {
         var b = System.Text.Encoding.UTF8.GetBytes(label);
         fixed (byte* ptr = b)
         {
-            var r = Internal.Sokol.ImGUI.igButton((sbyte*)ptr,size);
+            var r = Internal.Sokol.ImGUI.igButtonEx((sbyte*)ptr,size);
             if (r != 0)
             {
                 OnClick?.Invoke();
@@ -289,7 +289,7 @@ public static class ImGUI
         int v = value;
         fixed (byte* ptr = b, items_ptr = str_items)
         {
-            var r = Internal.Sokol.ImGUI.igCombo_Str((sbyte*)ptr,&v,(sbyte*)items_ptr,4);
+            var r = Internal.Sokol.ImGUI.igComboEx((sbyte*)ptr,&v,(sbyte*)items_ptr,4);
             value = v;
             return r != 0;
         }
@@ -315,7 +315,7 @@ public static class ImGUI
 
     public static void SameLine()
     {
-        Internal.Sokol.ImGUI.igSameLine(0,10);
+        Internal.Sokol.ImGUI.igSameLineEx(0,10);
     }
     public static void Seperator()
     {
@@ -367,11 +367,11 @@ public static class ImGUI
         var viewport = Internal.Sokol.ImGUI.igGetMainViewport();
         var work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         var work_size = viewport->WorkSize;
-        ImVec2 window_pos = default;
-        ImVec2 window_pos_pivot = default;
+        ImVec2_t window_pos = default;
+        ImVec2_t window_pos_pivot = default;
         window_pos.x = (work_pos.x + padding);
         window_pos.y = (work_pos.y + padding);
-        Internal.Sokol.ImGUI.igSetNextWindowPos(window_pos, (int)Condition.Always, window_pos_pivot);
+        Internal.Sokol.ImGUI.igSetNextWindowPosEx(window_pos, (int)Condition.Always, window_pos_pivot);
         // Internal.Sokol.ImGUI.igSetNextWindowViewport(viewport->ID); may need to add back?
         window_flags |= WindowFlags.NoMove;
         Internal.Sokol.ImGUI.igSetNextWindowBgAlpha(0.35f);
