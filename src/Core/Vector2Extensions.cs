@@ -1,5 +1,4 @@
 using System.Numerics;
-using Zinc.Internal.Cute;
 using Zinc.Internal.Sokol;
 
 namespace Zinc.Core;
@@ -7,9 +6,7 @@ namespace Zinc.Core;
 
 public static class VectorExtensions
 {
-    public static c2v ToC2V (this Vector2 v) => new(){x = v.X,y = v.Y};
-    public static Vector2 ToVector2(this c2v v) => new(v.x, v.y);
-    public static ImVec2 ToImVec2(this Vector2 v) => new ImVec2() { x = v.X, y = v.Y };
+    public static ImVec2_t ToImVec2(this Vector2 v) => new ImVec2_t() { x = v.X, y = v.Y };
     
     public static Vector2 Transform(
         this Vector2 v,
