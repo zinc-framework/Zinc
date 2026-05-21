@@ -1,0 +1,70 @@
+<Project>
+  <!--
+    Zinc shader build integration.
+
+    Runs sokol-shdc (from libs/tools/<host-rid>/) over every res/**/*.glsl in the
+    consuming project at build time, emitting bare_yaml reflection + per-stage
+    source into obj/.../shaders/ and feeding those to the Zinc.Magic source
+    generator as AdditionalFiles. shdc is NOT run during design-time/IntelliSense
+    builds — the generator instead reuses the artifacts from the last real build,
+    so editing code never invokes the shader compiler.
+
+    Import this from any project that authors shaders (and from Zinc.csproj so the
+    engine itself is shader-capable). Paths to the tool resolve via
+    $(MSBuildThisFileDirectory) (this file's dir), while res/**/*.glsl resolves
+    against the importing project.
+  -->
+
+  <PropertyGroup>
+    <ZincToolsDir>$(MSBuildThisFileDirectory)libs/tools/</ZincToolsDir>
+    <!-- v1 targets Metal (macOS); add more -l slangs once the generator parses their reflection. -->
+    <ZincShaderSlang Condition="'$(ZincShaderSlang)' == ''">metal_macos</ZincShaderSlang>
+  </PropertyGroup>
+
+  <!--
+    NOTE: $(IntermediateOutputPath) (obj/<cfg>/<tfm>/) is only set after the SDK's
+    targets import, which happens after this file is imported. So it's referenced
+    directly inside the targets below (evaluated at execution time), never in a
+    top-level PropertyGroup where it would still be empty.
+  -->
+
+  <!-- Pick the sokol-shdc binary for the build host. -->
+  <PropertyGroup Condition="'$(ZincShdcRid)' == ''">
+    <_ZincHostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</_ZincHostArch>
+    <ZincShdcRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(_ZincHostArch)' == 'Arm64'">osx-arm64</ZincShdcRid>
+    <ZincShdcRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(_ZincHostArch)' == 'X64'">osx-x64</ZincShdcRid>
+    <ZincShdcRid Condition="$([MSBuild]::IsOSPlatform('Windows'))">win-x64</ZincShdcRid>
+    <ZincShdcRid Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$(_ZincHostArch)' == 'Arm64'">linux-arm64</ZincShdcRid>
+    <ZincShdcRid Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$(_ZincHostArch)' == 'X64'">linux-x64</ZincShdcRid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ZincShdcExe Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(ZincToolsDir)$(ZincShdcRid)\sokol-shdc.exe</ZincShdcExe>
+    <ZincShdcExe Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(ZincToolsDir)$(ZincShdcRid)/sokol-shdc</ZincShdcExe>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ZincShaderSource Include="res/**/*.glsl" />
+  </ItemGroup>
+
+  <!-- Compile shaders (skipped in design-time builds and when there are none). -->
+  <Target Name="ZincRunShdc"
+          BeforeTargets="ZincCollectShaders"
+          Condition="'$(DesignTimeBuild)' != 'true' and '@(ZincShaderSource)' != ''"
+          Inputs="@(ZincShaderSource)"
+          Outputs="@(ZincShaderSource->'$(IntermediateOutputPath)shaders/%(Filename).shdc.stamp')">
+    <MakeDir Directories="$(IntermediateOutputPath)shaders" />
+    <Message Importance="high" Text="sokol-shdc [$(ZincShaderSlang)]: %(ZincShaderSource.Identity)" />
+    <Exec Command="&quot;$(ZincShdcExe)&quot; -i &quot;%(ZincShaderSource.Identity)&quot; -o &quot;$(IntermediateOutputPath)shaders/%(ZincShaderSource.Filename)&quot; -l $(ZincShaderSlang) -f bare_yaml" />
+    <Touch Files="$(IntermediateOutputPath)shaders/%(ZincShaderSource.Filename).shdc.stamp" AlwaysCreate="true" />
+  </Target>
+
+  <!-- Always (re)collect whatever shader artifacts exist on disk and hand them to
+       the generator. Runs even in design-time builds so the IDE picks up the last
+       real build's reflection. -->
+  <Target Name="ZincCollectShaders" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*_reflection.yaml" />
+      <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*.metal" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -6,6 +6,7 @@ namespace Zinc;
 [Component<RenderItem>]
 [Component<ShapeRenderer>("Renderer")]
 [Component<Collider>("Collider")]
+[Component<MaterialComponent>]
 public partial class Shape : SceneEntity
 {
     private readonly Action<Entity, double>? _updateWrapper;
@@ -21,6 +22,8 @@ public partial class Shape : SceneEntity
         Collider_Height = height;
         RenderOrder = Scene.GetNextSceneRenderCounter();
         Collider_Active = false;
+        // Material defaults to the sgp built-in pipeline: an unset (null) shader reads as
+        // ShaderAsset.Default via .Material.Shader and is skipped by the renderer.
 
         if (update != null && _updateWrapper == null)
         {

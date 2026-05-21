@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Zinc.Internal.STB;
 using Arch.Core;
+using Arch.Core.Extensions;
 using Zinc.Core;
 using Utils = Zinc.NativeInterop.Utils;
 
@@ -639,8 +640,26 @@ public static partial class Engine
         }
     }
 
-    public static void DrawTexturedRect(Anchor a, SpriteRenderer r)
+    // Applies an entity's MaterialComponent (custom shader + latched uniforms) if it has one and
+    // it isn't the sgp-default sentinel. Returns true if a custom pipeline was bound (caller must
+    // reset_pipeline after drawing).
+    private static unsafe bool ApplyMaterial(Anchor a)
     {
+        if (!a.ECSEntity.Has<MaterialComponent>()) return false;
+        ref var m = ref a.ECSEntity.Get<MaterialComponent>();
+        var shader = m.Shader;
+        if (shader.IsDefault) return false;
+        GP.set_pipeline(shader.Pipeline);
+        fixed (byte* vp = m.VsBytes) fixed (byte* fp = m.FsBytes)
+        {
+            GP.set_uniform(m.VsSize > 0 ? vp : null, (uint)m.VsSize, m.FsSize > 0 ? fp : null, (uint)m.FsSize);
+        }
+        return true;
+    }
+
+    public static unsafe void DrawTexturedRect(Anchor a, SpriteRenderer r)
+    {
+        bool customPipe = ApplyMaterial(a);
         GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
         GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
         GP.set_image(0,r.Texture.Data);
@@ -662,6 +681,7 @@ public static partial class Engine
         GP.pop_transform();
         // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
         GP.reset_image(0);
+        if (customPipe) GP.reset_pipeline();
     }
     
     public static void DrawText(Anchor a, TextRenderer r, int fontID)
@@ -764,12 +784,14 @@ public static partial class Engine
         }
     }
     
-    public static void DrawShape(Anchor a, ShapeRenderer r)
+    public static unsafe void DrawShape(Anchor a, ShapeRenderer r)
     {
+        bool customPipe = ApplyMaterial(a);
         //argb
         //rgba
         GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
-        GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_NONE);
+        // a custom SDF/effect shader usually wants real alpha blending, not the opaque shape default
+        GP.set_blend_mode(customPipe ? sgp_blend_mode.SGP_BLENDMODE_BLEND : sgp_blend_mode.SGP_BLENDMODE_NONE);
         var world = a.GetWorldTransform();
         world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
@@ -782,6 +804,7 @@ public static partial class Engine
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();
         GP.reset_color();
+        if (customPipe) GP.reset_pipeline();
     }
 
     public static void DrawParticles(Anchor a, ParticleEmitterComponent c, double dt)

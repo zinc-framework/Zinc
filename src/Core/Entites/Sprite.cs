@@ -6,6 +6,7 @@ namespace Zinc;
 [Component<Collider>("Collider")]
 [Component<RenderItem>]
 [Component<SpriteRenderer>("Renderer")]
+[Component<MaterialComponent>]
 public partial class Sprite : SceneEntity
 {
     public SpriteData Data { get; init; }
