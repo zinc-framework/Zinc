@@ -2,7 +2,6 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Arch.Core.Extensions;
-using Zinc.Core;
 
 namespace Zinc;
 
@@ -15,15 +14,15 @@ namespace Zinc;
 public sealed class EntityAccessibleAttribute : Attribute { }
 
 // Per-object shader override + latched uniform bytes. Baked into Shape/Sprite; default Shader
-// (ShaderAsset.Default) means "use sgp's built-in pipeline", i.e. today's behavior. The byte buffers
-// hold the most-recent uniform block(s) set in Update until the renderer uploads them at draw.
+// (Resources.Shader.Default) means "use sgp's built-in pipeline", i.e. today's behavior. The byte
+// buffers hold the most-recent uniform block(s) set in Update until the renderer uploads them at draw.
 //
 // Fields are internal: the public surface is the `.Material` accessor + `.Shader` property, exposed
 // onto entities by the [EntityAccessible] members below via the generator.
 [Arch.AOT.SourceGenerator.Component]
 public record struct MaterialComponent : IComponent
 {
-    internal Assets.ShaderAsset _shader;
+    internal Resources.Shader _shader;
     internal byte[] VsBytes;
     internal byte[] FsBytes;
     internal int VsSize;
@@ -31,9 +30,9 @@ public record struct MaterialComponent : IComponent
 
     /// <summary>Custom sgp shader for this object; defaults to the sgp built-in pipeline.</summary>
     [EntityAccessible]
-    public Assets.ShaderAsset Shader
+    public Resources.Shader Shader
     {
-        get => _shader ?? Assets.ShaderAsset.Default;
+        get => _shader ?? Resources.Shader.Default;
         set => _shader = value;
     }
 

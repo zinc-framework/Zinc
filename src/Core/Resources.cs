@@ -70,6 +70,58 @@ public static class Resources
             return new SpriteData(this, rect);
         }
     }
+
+    // A loadable custom sgp shader, shaped like Texture: an identifier (Name) plus a "source" that
+    // Load() turns into the native sg_shader (Data) + its sgp pipeline. Where Texture's source is a
+    // file path (read at Load), a Shader's source is a backend->sg_shader factory compiled from
+    // sokol-shdc. Two-phase generation, NO registry: Zinc.Magic emits the `Res.Assets.<program>`
+    // handle from the .glsl alone (always IDE-available so you can code against a new shader before
+    // building), and the shdc build step wires the compiled factory onto that handle via SetFactory.
+    // The std140 uniform blocks are the generated record-structs under Res.Shaders.<program>.
+    public record Shader
+    {
+        public string Name { get; init; } = "";
+        /// <summary>The sgp built-in pipeline sentinel; the renderer skips set_pipeline for it.</summary>
+        public bool IsDefault { get; init; }
+
+        private Func<sg_backend, sg_shader>? factory;
+        private sg_pipeline pipeline;
+
+        public bool Loaded { get; private set; }
+        public sg_shader Data { get; private set; }
+
+        /// <summary>Default = "use sgp's built-in pipeline" (today's behavior for un-shadered objects).</summary>
+        public static readonly Shader Default = new() { Name = "__sgp_default__", IsDefault = true };
+
+        private Shader() { }                  // sentinel only
+        public Shader(string name) { Name = name; }
+
+        /// <summary>Generated-use: wires the build-compiled factory onto this stub handle. Not for hand use.</summary>
+        public void SetFactory(Func<sg_backend, sg_shader> factory) => this.factory = factory;
+
+        /// <summary>Build the native sg_shader for the current backend and its sgp pipeline.</summary>
+        public unsafe bool Load(bool forceReload = false)
+        {
+            if (Loaded && !forceReload) return true;
+            if (IsDefault) return false;
+            if (factory is null)
+                throw new InvalidOperationException(
+                    $"Shader '{Name}' has no compiled backend — make sure res/shaders/{Name}.glsl was built " +
+                    "(a real `dotnet build`, not a design-time/IntelliSense build).");
+            Data = factory(Gfx.query_backend());
+            sgp_pipeline_desc pd = default;
+            pd.shader = Data;
+            pd.has_vs_color = 1; // sgp's vertex layout carries the per-vertex color the shaders read
+            pipeline = GP.make_pipeline(&pd);
+            Loaded = true;
+            return true;
+        }
+
+        public sg_pipeline Pipeline { get { if (!Loaded) Load(); return pipeline; } }
+
+        /// <summary>Bind this shader's pipeline for subsequent sgp draws.</summary>
+        public void Apply() => GP.set_pipeline(Pipeline);
+    }
 }
 
 public record Animation(string Name, Rect[] Frames, float animationTime = 1f)

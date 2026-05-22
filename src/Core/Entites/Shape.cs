@@ -23,7 +23,7 @@ public partial class Shape : SceneEntity
         RenderOrder = Scene.GetNextSceneRenderCounter();
         Collider_Active = false;
         // Material defaults to the sgp built-in pipeline: an unset (null) shader reads as
-        // ShaderAsset.Default via .Material.Shader and is skipped by the renderer.
+        // Resources.Shader.Default via .Shader and is skipped by the renderer.
 
         if (update != null && _updateWrapper == null)
         {
