@@ -128,6 +128,14 @@ Zinc has *five* simultaneous draw paths active each frame, all flushed inside on
 
 Per frame, in order: `GP.flush() → GP.end() → DebugText.draw() → GL.draw() → ImGUI.render()`.
 
+### Custom shaders / materials
+
+Objects can override sgp's built-in pipeline with a custom shader authored as sokol-shdc GLSL in
+`res/shaders/*.glsl`, compiled at build into typed C# and bound per-entity (`entity.Shader` +
+`entity.Material.Set*Uniforms(...)`). The full pipeline — authoring contract, the two-phase code
+generation (Zinc.Magic), the `Zinc.Shaders.targets` build step, `Resources.Shader` / `MaterialComponent`
+/ `[EntityAccessible]`, and current limits — is documented in **[`docs/shaders.md`](docs/shaders.md)**.
+
 ## Native lib loading (`src/Core/Utility/NativeLibResolver.cs`)
 
 A static `DllImportResolver` is registered for the framework assembly that maps logical lib names (`sokol`, `box2d`, `stb`) to platform-specific paths under `libs/runtimes/{osx-arm64,win-x64,browser-wasm}/native/`. `Engine.Boot` calls `NativeLibResolver.kick()` to force the static ctor before any P/Invoke runs.
