@@ -57,7 +57,11 @@ public partial class Scene : Entity
                 if(staged is Anchor) {continue;} //we handle anchors seperatly below
                 staged.Destroy(); //destroys things like coroutines that are attached to a scene but not an anchor
             }
-            Cleanup();
+            // NOTE: Cleanup() is intentionally NOT called here. Unmount runs synchronously mid-frame
+            // (from the menu/nav in Update?.Invoke), but the scene stays in MountedScenes until the
+            // deferred Engine.UnmountScene at frame end — so its Update() and the frame's render pass
+            // still run this frame. Cleanup() is deferred to UnmountScene so a scene that frees GPU/
+            // native resources there doesn't pull them out from under that final frame.
             root!.Destroy();
             root = null;
             Engine.SceneEntityMap[ID].Clear();

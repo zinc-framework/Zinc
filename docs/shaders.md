@@ -110,8 +110,14 @@ sokol-shdc over `res/**/*.glsl` before `CoreCompile`:
   which memcpys the block into the latch buffer. `Unsafe.SizeOf<T>()` equals the struct's `[StructLayout]`
   Size equals the std140 block size, so the upload size is correct by construction. There are no named
   uniform setters and no runtime layout table — the generated struct is the single source of layout truth.
-- **`Engine.DrawShape` / `DrawTexturedRect`** (`src/Core.cs`, `ApplyMaterial`) bind the custom pipeline +
-  latched uniforms, draw, then reset. If the shader is `Default`, they leave rendering on sgp's built-in.
+- **Images & samplers** (for shaders with texture channels, e.g. the `effect` demo) are bound per-object
+  with `entity.Material.SetImage(channel, Resources.Texture)` / `SetSampler(channel, Resources.Sampler)`,
+  where `channel` is sgp's `set_image`/`set_sampler` slot. The generator emits the shader's
+  `views`/`samplers`/`texture_sampler_pairs` from shdc reflection into the `sg_shader_desc`. `Resources.Sampler`
+  is a small loadable shaped like `Resources.Texture` (filter/wrap → `sg_sampler`).
+- **`Engine.DrawShape` / `DrawTexturedRect`** (`src/Core.cs`, `ApplyMaterial` / `ResetMaterial`) bind the
+  custom pipeline + latched uniforms + any bound images/samplers, draw, then reset. If the shader is
+  `Default`, they leave rendering on sgp's built-in.
 - **`entity.Shader` and `entity.Material`** are emitted by **Zinc.ECSGenerator** (a separate package) from
   `MaterialComponent`'s `[EntityAccessible]` members — a general mechanism that forwards a component's
   members onto entities that use it. Any component can opt in the same way.
@@ -143,16 +149,27 @@ without a registry.
 
 - **Metal (macOS) only.** shdc is invoked for `metal_macos`; other backends throw `NotSupportedException`
   at `Load()`. Adding HLSL/GL/WGSL is more `-l` slangs + per-backend reflection branches in Zinc.Magic.
-- **No image/sampler shaders yet** — so sokol_gp's `effect` (multi-texture) and `framebuffer` (offscreen)
-  samples aren't ported. Uniforms-only shaders (e.g. the SDF demo) are the supported path.
+- **Per-draw uniform/texture caps** are sokol_gp compile-time constants set in Zinc.Bootstrapper's
+  `sokol.c`: `SGP_UNIFORM_CONTENT_SLOTS=64` (256 bytes of combined vs+fs uniform per draw) and
+  `SGP_TEXTURE_SLOTS=8` (texture channels per draw). The material API bounds-checks against these
+  (mirrored as `MaterialComponent.MaxUniformBytes` / `TextureSlots`) and throws a clear error rather than
+  silently overflowing sokol_gp's buffer. Raising them further = bump those defines in Zinc.Bootstrapper's
+  `sokol.c`, rebuild the native lib (`./build.sh sokol:build`, copy into the Zinc.Libs submodule), and
+  bump the mirrored C# consts. A native rebuild is *not* needed to add a new uniforms-only or textured
+  shader — only to exceed the caps.
+
+Both image/sampler shaders and offscreen rendering now have working demos: `SGP_Example_Effect` (custom
+shader, 2 textures + 2 samplers + uniforms, via the material system) and `SGP_Example_Framebuffer`
+(offscreen render target via the sokol view API + a nested GP queue, drawn raw in `Scene.Update`).
 
 ## Where the code lives
 
 | Piece | Location |
 |---|---|
-| `Resources.Shader` | `src/Core/Resources.cs` |
-| `MaterialComponent`, `MaterialAccessor`, `[EntityAccessible]` | `src/Core/Material.cs` |
-| `ApplyMaterial` + the `DrawShape`/`DrawTexturedRect` hooks | `src/Core.cs` |
+| `Resources.Shader`, `Resources.Sampler` | `src/Core/Resources.cs` |
+| `MaterialComponent`, `MaterialAccessor`, `[EntityAccessible]`, cap consts | `src/Core/Components/MaterialComponent.cs` |
+| `ApplyMaterial` / `ResetMaterial` + the `DrawShape`/`DrawTexturedRect` hooks | `src/Core.cs` |
+| native cap defines (`SGP_UNIFORM_CONTENT_SLOTS` / `SGP_TEXTURE_SLOTS`) | Zinc.Bootstrapper `libs/sokol/build/sokol.c` |
 | shdc build target | `Zinc.Shaders.targets` |
 | shdc binaries | `libs/tools/<rid>/sokol-shdc` |
 | `.glsl` → C# generator | **Zinc.Magic** package (`ShaderGen.cs`) |

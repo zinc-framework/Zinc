@@ -602,6 +602,10 @@ public static partial class Engine
 
     static void UnmountScene((Scene scene, Action callback) s)
     {
+        // Deferred from Scene.Unmount so it runs after the scene's final Update + the frame's render
+        // pass (which still happen the frame Unmount is called) — frees GPU/native resources only once
+        // nothing else this frame can reference them. Runs before the callback that mounts the next scene.
+        s.scene.Cleanup();
         SceneEntityMap.Remove(s.scene.ID);
         MountedScenes.Remove(s.scene.ID);
         s.scene.MountStatus = SceneMountStatus.Unmounted;
@@ -654,7 +658,30 @@ public static partial class Engine
         {
             GP.set_uniform(m.VsSize > 0 ? vp : null, (uint)m.VsSize, m.FsSize > 0 ? fp : null, (uint)m.FsSize);
         }
+        // Bind any per-channel images/samplers the material set (custom shaders with textures).
+        if (m.Images != null)
+            for (int i = 0; i < m.Images.Length; i++)
+                if ((m.ImageMask & (1 << i)) != 0) GP.set_image(i, m.Images[i]);
+        if (m.Samplers != null)
+            for (int i = 0; i < m.Samplers.Length; i++)
+                if ((m.SamplerMask & (1 << i)) != 0) GP.set_sampler(i, m.Samplers[i]);
         return true;
+    }
+
+    // Pairs with ApplyMaterial: resets the custom pipeline and any image/sampler channels it bound.
+    private static void ResetMaterial(Anchor a)
+    {
+        if (a.ECSEntity.Has<MaterialComponent>())
+        {
+            ref var m = ref a.ECSEntity.Get<MaterialComponent>();
+            if (m.Images != null)
+                for (int i = 0; i < m.Images.Length; i++)
+                    if ((m.ImageMask & (1 << i)) != 0) GP.reset_image(i);
+            if (m.Samplers != null)
+                for (int i = 0; i < m.Samplers.Length; i++)
+                    if ((m.SamplerMask & (1 << i)) != 0) GP.reset_sampler(i);
+        }
+        GP.reset_pipeline();
     }
 
     public static unsafe void DrawTexturedRect(Anchor a, SpriteRenderer r)
@@ -681,7 +708,7 @@ public static partial class Engine
         GP.pop_transform();
         // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
         GP.reset_image(0);
-        if (customPipe) GP.reset_pipeline();
+        if (customPipe) ResetMaterial(a);
     }
     
     public static void DrawText(Anchor a, TextRenderer r, int fontID)
@@ -804,7 +831,7 @@ public static partial class Engine
         GP.draw_filled_rect(0, 0, r.Width, r.Height);
         GP.pop_transform();
         GP.reset_color();
-        if (customPipe) GP.reset_pipeline();
+        if (customPipe) ResetMaterial(a);
     }
 
     public static void DrawParticles(Anchor a, ParticleEmitterComponent c, double dt)

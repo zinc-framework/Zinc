@@ -3,6 +3,15 @@ namespace Zinc;
 
 public interface IComponent {}
 
+// Marks a component member (method or property) that the Zinc.ECSGenerator should surface directly
+// on any entity that uses the component. Instance members forward through a `ref` to the stored
+// component (so mutations persist); a parameter of type Zinc.Entity is filled with the owning entity
+// (and, if it's the only parameter, the member is exposed as a property). This is how MaterialComponent
+// exposes `.Material`, and the general hook any component can use to expose behavior to its entities.
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+public sealed class EntityAccessibleAttribute : Attribute { }
+
+
 // public record struct Position(float X = 0, float Y = 0, float ScaleX = 1, float ScaleY = 1, float Rotation = 0f) : IComponent
 // {
 [Arch.AOT.SourceGenerator.Component]

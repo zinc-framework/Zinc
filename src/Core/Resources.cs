@@ -122,6 +122,40 @@ public static class Resources
         /// <summary>Bind this shader's pipeline for subsequent sgp draws.</summary>
         public void Apply() => GP.set_pipeline(Pipeline);
     }
+
+    // A loadable sampler, shaped like Texture: a small config that Load() turns into the native
+    // sg_sampler (Data). Used by custom shaders' image channels via the material API
+    // (entity.Material.SetSampler). The default filter/wrap covers the common "linear, repeat" case.
+    public record Sampler
+    {
+        public string Name { get; init; } = "";
+        public sg_filter MinFilter { get; init; } = sg_filter.SG_FILTER_LINEAR;
+        public sg_filter MagFilter { get; init; } = sg_filter.SG_FILTER_LINEAR;
+        public sg_wrap WrapU { get; init; } = sg_wrap.SG_WRAP_REPEAT;
+        public sg_wrap WrapV { get; init; } = sg_wrap.SG_WRAP_REPEAT;
+
+        public sg_sampler Data { get; private set; }
+        public bool Loaded { get; private set; }
+
+        public Sampler() { }
+        public Sampler(string name) { Name = name; }
+
+        public unsafe bool Load(bool forceReload = false)
+        {
+            if (Loaded && !forceReload) return true;
+            sg_sampler_desc d = default;
+            d.min_filter = MinFilter;
+            d.mag_filter = MagFilter;
+            d.wrap_u = WrapU;
+            d.wrap_v = WrapV;
+            Data = Gfx.make_sampler(&d);
+            Loaded = true;
+            return true;
+        }
+
+        /// <summary>The native sg_sampler, created on first use.</summary>
+        public sg_sampler Handle { get { if (!Loaded) Load(); return Data; } }
+    }
 }
 
 public record Animation(string Name, Rect[] Frames, float animationTime = 1f)
