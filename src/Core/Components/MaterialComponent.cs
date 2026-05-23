@@ -111,7 +111,7 @@ public readonly struct MaterialAccessor
     }
 
     /// <summary>Bind a sampler to a custom shader's image channel (maps to sgp_set_sampler(channel)).</summary>
-    public void SetSampler(int channel, Resources.Sampler sampler)
+    public void SetSampler(int channel, Sampler sampler)
     {
         if ((uint)channel >= MaterialComponent.TextureSlots)
             throw new ArgumentOutOfRangeException(nameof(channel), channel,

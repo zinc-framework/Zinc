@@ -176,3 +176,19 @@ public enum MouseButton : uint
     MIDDLE = Internal.Sokol.sapp_mousebutton.SAPP_MOUSEBUTTON_MIDDLE,
     INVALID = Internal.Sokol.sapp_mousebutton.SAPP_MOUSEBUTTON_INVALID
 }
+
+// Texture sampling filter (values map 1:1 to sokol's sg_filter, so a cast is valid).
+public enum Filter : uint
+{
+    Nearest = Internal.Sokol.sg_filter.SG_FILTER_NEAREST,
+    Linear = Internal.Sokol.sg_filter.SG_FILTER_LINEAR,
+}
+
+// Texture-coordinate wrap mode (values map 1:1 to sokol's sg_wrap, so a cast is valid).
+public enum Wrap : uint
+{
+    Repeat = Internal.Sokol.sg_wrap.SG_WRAP_REPEAT,
+    ClampToEdge = Internal.Sokol.sg_wrap.SG_WRAP_CLAMP_TO_EDGE,
+    ClampToBorder = Internal.Sokol.sg_wrap.SG_WRAP_CLAMP_TO_BORDER,
+    MirroredRepeat = Internal.Sokol.sg_wrap.SG_WRAP_MIRRORED_REPEAT,
+}

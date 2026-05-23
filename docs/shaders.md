@@ -111,10 +111,12 @@ sokol-shdc over `res/**/*.glsl` before `CoreCompile`:
   Size equals the std140 block size, so the upload size is correct by construction. There are no named
   uniform setters and no runtime layout table — the generated struct is the single source of layout truth.
 - **Images & samplers** (for shaders with texture channels, e.g. the `effect` demo) are bound per-object
-  with `entity.Material.SetImage(channel, Resources.Texture)` / `SetSampler(channel, Resources.Sampler)`,
+  with `entity.Material.SetImage(channel, Resources.Texture)` / `SetSampler(channel, Sampler)`,
   where `channel` is sgp's `set_image`/`set_sampler` slot. The generator emits the shader's
-  `views`/`samplers`/`texture_sampler_pairs` from shdc reflection into the `sg_shader_desc`. `Resources.Sampler`
-  is a small loadable shaped like `Resources.Texture` (filter/wrap → `sg_sampler`).
+  `views`/`samplers`/`texture_sampler_pairs` from shdc reflection into the `sg_shader_desc`. `Sampler`
+  (`src/Core/Rendering/Sampler.cs`) is a small `readonly record struct` that creates its `sg_sampler` on
+  construction (so build it from `Create()`/`Update()`, not a static init); filter/wrap are the friendly
+  `Filter` / `Wrap` enums (`TypeMappings.cs`).
 - **`Engine.DrawShape` / `DrawTexturedRect`** (`src/Core.cs`, `ApplyMaterial` / `ResetMaterial`) bind the
   custom pipeline + latched uniforms + any bound images/samplers, draw, then reset. If the shader is
   `Default`, they leave rendering on sgp's built-in.
@@ -166,7 +168,8 @@ shader, 2 textures + 2 samplers + uniforms, via the material system) and `SGP_Ex
 
 | Piece | Location |
 |---|---|
-| `Resources.Shader`, `Resources.Sampler` | `src/Core/Resources.cs` |
+| `Resources.Shader` | `src/Core/Resources.cs` |
+| `Sampler`, `Filter` / `Wrap` enums | `src/Core/Rendering/Sampler.cs`, `src/Core/TypeMappings.cs` |
 | `MaterialComponent`, `MaterialAccessor`, `[EntityAccessible]`, cap consts | `src/Core/Components/MaterialComponent.cs` |
 | `ApplyMaterial` / `ResetMaterial` + the `DrawShape`/`DrawTexturedRect` hooks | `src/Core.cs` |
 | native cap defines (`SGP_UNIFORM_CONTENT_SLOTS` / `SGP_TEXTURE_SLOTS`) | Zinc.Bootstrapper `libs/sokol/build/sokol.c` |
