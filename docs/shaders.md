@@ -133,7 +133,12 @@ is `texture(...) * iColor`). Its per-instance inputs are *not* uniforms:
   from the material API on purpose — not every material has a color, and the tint is a geometry-draw
   concern, not a shader uniform).
 - **texture/sampler** — `set_image` / `set_sampler` (the Sprite's texture).
-- **transform** — baked into vertex positions; **blend mode** — pipeline state.
+- **transform** — baked into vertex positions.
+- **blend mode** — pipeline state, exposed per-object as `shape.Renderer_BlendMode` (a `BlendMode` enum in
+  `TypeMappings.cs`); shapes default to `None` (opaque), sprites to `Blend`.
+
+For offscreen rendering there's `RenderTarget` (`src/Core/Rendering/RenderTarget.cs`): draw into it with
+`Render(...)`, then sample its `.Texture` on any Sprite/Shape (see the `SGP_Zinc_Framebuffer` demo).
 
 So `Set*Uniforms` only apply to a *custom* shader; setting uniforms on a default-shaded object throws.
 

@@ -39,6 +39,15 @@ public static class Resources
                 Load();
             }
         }
+
+        /// <summary>Wrap an already-created sg_image (e.g. a RenderTarget's color attachment) as a Texture.</summary>
+        public Texture(sg_image data, int width, int height)
+        {
+            Data = data;
+            Width = width;
+            Height = height;
+            DataLoaded = true;
+        }
         public bool Load(bool forceReload = false)
         {
             if (DataLoaded && !forceReload) { return true; }

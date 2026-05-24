@@ -192,3 +192,16 @@ public enum Wrap : uint
     ClampToBorder = Internal.Sokol.sg_wrap.SG_WRAP_CLAMP_TO_BORDER,
     MirroredRepeat = Internal.Sokol.sg_wrap.SG_WRAP_MIRRORED_REPEAT,
 }
+
+// Per-object blend mode (values map 1:1 to sokol_gp's sgp_blend_mode, so a cast is valid). Set it on an
+// entity via Renderer_BlendMode. None == 0, so it's the default for a fresh ShapeRenderer (opaque shapes).
+public enum BlendMode : uint
+{
+    None = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_NONE,
+    Blend = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_BLEND,
+    BlendPremultiplied = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_BLEND_PREMULTIPLIED,
+    Add = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_ADD,
+    AddPremultiplied = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_ADD_PREMULTIPLIED,
+    Mod = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_MOD,
+    Mul = Internal.Sokol.sgp_blend_mode.SGP_BLENDMODE_MUL,
+}

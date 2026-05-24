@@ -688,7 +688,7 @@ public static partial class Engine
     {
         bool customPipe = ApplyMaterial(a);
         GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
-        GP.set_blend_mode(sgp_blend_mode.SGP_BLENDMODE_BLEND);
+        GP.set_blend_mode((sgp_blend_mode)r.BlendMode);
         GP.set_image(0,r.Texture.Data);
         var world = a.GetWorldTransform();
         world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
@@ -817,8 +817,7 @@ public static partial class Engine
         //argb
         //rgba
         GP.set_color(r.Color.R, r.Color.G, r.Color.B, r.Color.A);
-        // a custom SDF/effect shader usually wants real alpha blending, not the opaque shape default
-        GP.set_blend_mode(customPipe ? sgp_blend_mode.SGP_BLENDMODE_BLEND : sgp_blend_mode.SGP_BLENDMODE_NONE);
+        GP.set_blend_mode((sgp_blend_mode)r.BlendMode);
         var world = a.GetWorldTransform();
         world.transform.Decompose(out var world_pos, out var world_rotation, out var scale);
         GP.push_transform();
