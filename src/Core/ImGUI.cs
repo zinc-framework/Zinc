@@ -282,6 +282,18 @@ public static class ImGUI
         }
     }
 
+    public static unsafe void SmallButton(ref byte[] label, Action OnClick)
+    {
+        fixed (byte* ptr = label)
+        {
+            var r = Internal.Sokol.ImGUI.igSmallButton((sbyte*)ptr);
+            if (r != 0)
+            {
+                OnClick?.Invoke();
+            }
+        }
+    }
+
     public static unsafe bool Combo(string label, IEnumerable<string> items, ref int value)
     {
         var b = System.Text.Encoding.UTF8.GetBytes(label);

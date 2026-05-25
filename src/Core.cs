@@ -294,6 +294,7 @@ public static partial class Engine
     // showed up as growing UI input lag after a few seconds of mouse motion.
     private static readonly byte[] _sokolGfxMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-gfx\0");
     private static readonly byte[] _sokolAppMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-app\0");
+    private static byte[] _screenshotButton = System.Text.Encoding.UTF8.GetBytes("Screenshot (F2)\0");
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Initialize()
@@ -501,6 +502,8 @@ public static partial class Engine
             {
                 AppDebugGUI.draw_menu((sbyte*)am_ptr);
             }
+
+            Core.ImGUI.SmallButton(ref _screenshotButton, () => Screenshot());
 
             Core.ImGUI.EndMainMenuBar();
         }
