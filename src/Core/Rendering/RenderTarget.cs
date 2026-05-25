@@ -92,14 +92,16 @@ public sealed class RenderTarget
     }
 
     /// <summary>
-    /// Render into this target. The callback issues GP draws in a top-left (0,0)-(Width,Height) space;
-    /// the offscreen pass (begin/flush/end) is set up around it. Call from within a frame (Scene.Update),
-    /// before whatever samples the result is drawn.
+    /// Render into this target: the offscreen pass (begin/flush/end) is set up around your draw callback.
+    /// The callback owns the coordinate space — GP.begin defaults to the usual upright, top-left
+    /// (0,0)-(Width,Height) framebuffer coords (same as the main frame). If the result will be *sampled
+    /// as a texture* and you need a Y-flip for that, project for it inside your draw, exactly as the raw
+    /// sokol_gp framebuffer sample does (`GP.project(0, Width, Height, 0)`). Call from within a frame
+    /// (Scene.Update), before whatever samples the result is drawn.
     /// </summary>
     public unsafe void Render(Action draw, Color clear = null)
     {
         GP.begin(Width, Height);
-        GP.project(0, Width, Height, 0);
         draw();
 
         sg_pass pass = default;

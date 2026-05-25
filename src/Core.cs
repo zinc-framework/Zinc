@@ -35,6 +35,45 @@ public static partial class Engine
         ClearColor = c;
     }
 
+    // --- Screenshots ---------------------------------------------------------------------------------
+    // Capture the rendered world to a PNG. The world is re-rendered into an offscreen RenderTarget and
+    // read back on the GPU (see Screenshot.cs / the native readback in the stb lib), so the result is
+    // exactly the scene with no ImGui/debug overlay on top. Works for both entity-based scenes and
+    // immediate-mode (Scene.Update) demos.
+
+    /// <summary>Default location screenshots are written to. Change it directly or via SetScreenshotPath.</summary>
+    public static string ScreenshotPath = Path.Combine(AppContext.BaseDirectory, "screenshots", "zinc.png");
+
+    /// <summary>Set the default screenshot output path (used by Screenshot() when no path is passed).</summary>
+    public static void SetScreenshotPath(string path) => ScreenshotPath = path;
+
+    private static bool screenshotPending;
+    private static string screenshotResolvedPath;
+    private static RenderTarget screenshotTarget;
+
+    /// <summary>
+    /// Request a screenshot. If <paramref name="path"/> is null, a timestamped file is written next to
+    /// ScreenshotPath. The capture happens at the end of the current frame.
+    /// </summary>
+    public static void Screenshot(string path = null)
+    {
+        if (path == null)
+        {
+            var dir = Path.GetDirectoryName(ScreenshotPath);
+            var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+            path = string.IsNullOrEmpty(dir) ? $"zinc_{stamp}.png" : Path.Combine(dir, $"zinc_{stamp}.png");
+        }
+        screenshotResolvedPath = path;
+        screenshotPending = true;
+    }
+
+    // Re-issue the active scenes' entity draws into the current GP recording, so the screenshot path can
+    // capture the world into an offscreen target. dt=0 so nothing advances (particles etc. aren't
+    // double-stepped) — it just redraws the current frame's state. Immediate-mode demos that draw inside
+    // Scene.Update (the SGP_* parity ports) are intentionally NOT captured: that draw shape exists only
+    // to show sokol_gp parity and isn't how real Zinc scenes render (they use entities).
+    private static void DrawWorldForCapture() => SceneRenderSystem.RenderActiveScenes(0);
+
     private static HashSet<DSystem> DefaultSystems = new HashSet<DSystem>()
     {
         //preupdate
@@ -546,8 +585,19 @@ public static partial class Engine
         }
         
         if (drawDebugOverlay)
-        { 
+        {
             DebugOverlay.Update(DeltaTime);
+        }
+
+        // Screenshot (part 1): render the world into an offscreen target. Nested inside this frame's GP
+        // recording (like the framebuffer demo) so its offscreen pass is committed with the frame below;
+        // the readback then happens after Gfx.commit(). RenderTarget.Render defaults to upright,
+        // on-screen coords (it imposes no projection), so the captured world matches the live frame.
+        if (screenshotPending)
+        {
+            screenshotTarget?.Dispose();
+            screenshotTarget = new RenderTarget(Width, Height);
+            screenshotTarget.Render(DrawWorldForCapture, clear: ClearColor);
         }
 
         // var text = "MYSTERY DUNGEON HAND";
@@ -578,6 +628,21 @@ public static partial class Engine
             ImGUI.render();
             Gfx.end_pass();
             Gfx.commit();
+        }
+
+        // Screenshot (part 2): the offscreen pass is now committed, so read its color image back on
+        // sokol's command queue (FIFO after the frame's work) and write the PNG.
+        if (screenshotPending)
+        {
+            // Content was rendered upright, so no sampling pre-flip on readback (flipY:false). Any
+            // backend-specific origin handling (e.g. GL's bottom-up readback) lives in the native layer.
+            bool ok = ScreenshotWriter.SaveImage(screenshotTarget.Texture.Data, Width, Height, screenshotResolvedPath, flipY: false);
+            Console.WriteLine(ok
+                ? $"[Screenshot] saved {screenshotResolvedPath}"
+                : "[Screenshot] failed to save");
+            screenshotTarget.Dispose();
+            screenshotTarget = null;
+            screenshotPending = false;
         }
 
         foreach (var s in ActiveSystems)

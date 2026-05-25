@@ -16,17 +16,31 @@ public abstract class RenderSystem : DSystem, IPostUpdateSystem
 
 public class SceneRenderSystem : RenderSystem
 {
-    QueryDescription scenes = new QueryDescription().WithAll<ActiveState,EntityID,SceneComponent>(); 
-    QueryDescription validRenderEntites = new QueryDescription().WithAll<ActiveState,EntityID,SceneMember,RenderItem,Position>();      
+    static QueryDescription scenes = new QueryDescription().WithAll<ActiveState,EntityID,SceneComponent>();
+    static QueryDescription validRenderEntites = new QueryDescription().WithAll<ActiveState,EntityID,SceneMember,RenderItem,Position>();
 
-    
-    QueryDescription renderedSprites = new QueryDescription().WithAll<ActiveState,Position,SpriteRenderer,SceneMember>();      
-    QueryDescription renderedShapes = new QueryDescription().WithAll<ActiveState,Position,ShapeRenderer,SceneMember>();      
-    QueryDescription renderedParticles = new QueryDescription().WithAll<ActiveState,Position,ParticleEmitterComponent,SceneMember>();      
 
-    
-    private List<Scene> scenesToUpdate = new List<Scene>();
+    QueryDescription renderedSprites = new QueryDescription().WithAll<ActiveState,Position,SpriteRenderer,SceneMember>();
+    QueryDescription renderedShapes = new QueryDescription().WithAll<ActiveState,Position,ShapeRenderer,SceneMember>();
+    QueryDescription renderedParticles = new QueryDescription().WithAll<ActiveState,Position,ParticleEmitterComponent,SceneMember>();
+
+
+    static List<Scene> scenesToUpdate = new List<Scene>();
+
     protected override void Render(double dt)
+    {
+        RenderActiveScenes(dt);
+        unsafe
+        {
+            Zinc.Internal.Sokol.Fontstash.flush(Engine.font_state.FONSContext);
+        }
+    }
+
+    // Issue the GP/entity draw commands for every active scene into the *current* GP recording, ordered
+    // by mount depth then RenderOrder. Pulled out of Render() so the screenshot path can re-issue the
+    // same draws into an offscreen RenderTarget. Does NOT flush fontstash (text goes through sokol_gl,
+    // which isn't part of an offscreen GP pass) — the live Render() does that separately.
+    public static void RenderActiveScenes(double dt)
     {
         scenesToUpdate.Clear();
         Engine.ECSWorld.Query(in scenes, (Arch.Core.Entity e, ref ActiveState a, ref EntityID managedID, ref SceneComponent scene) => {
@@ -115,10 +129,6 @@ public class SceneRenderSystem : RenderSystem
                     Engine.DrawParticles(renderEntity as Anchor,emitter,dt);
                 }
             }
-        }
-        unsafe
-        {
-            Zinc.Internal.Sokol.Fontstash.flush(Engine.font_state.FONSContext);
         }
     }
 }
