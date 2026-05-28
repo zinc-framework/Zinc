@@ -17,8 +17,19 @@
 
   <PropertyGroup>
     <ZincToolsDir>$(MSBuildThisFileDirectory)libs/tools/</ZincToolsDir>
-    <!-- v1 targets Metal (macOS); add more -l slangs once the generator parses their reflection. -->
-    <ZincShaderSlang Condition="'$(ZincShaderSlang)' == ''">metal_macos</ZincShaderSlang>
+    <!--
+      Compile each shader for every backend Zinc supports in a single shdc invocation —
+      shdc emits one combined `<name>_reflection.yaml` with a top-level `shaders:` list,
+      one entry per slang, alongside per-slang per-stage source files. Zinc.Magic walks
+      that list and generates a separate `Shader_<name>__<slang>.g.cs` factory per slang,
+      each registering itself for the matching `sg_backend` at module load. The runtime
+      then picks the right one based on the actual graphics backend without any per-RID
+      build conditional.
+
+      Override by setting `ZincShaderSlang` in your project (colon-separated). E.g. set
+      it to `metal_macos` if you only ship for Apple and want a smaller artifact.
+    -->
+    <ZincShaderSlang Condition="'$(ZincShaderSlang)' == ''">hlsl5:glsl430:metal_macos:glsl300es</ZincShaderSlang>
   </PropertyGroup>
 
   <!--
@@ -60,11 +71,23 @@
 
   <!-- Always (re)collect whatever shader artifacts exist on disk and hand them to
        the generator. Runs even in design-time builds so the IDE picks up the last
-       real build's reflection. -->
+       real build's reflection.
+
+       The per-stage extensions correspond to shdc's slang output:
+         *.metal — metal_macos / metal_ios / metal_sim
+         *.hlsl  — hlsl4 / hlsl5  (Direct3D11)
+         *.glsl  — glsl410 / glsl430 / glsl300es / glsl310es  (OpenGL & WebGL2)
+         *.wgsl  — wgsl (WebGPU)
+       The .yaml is the reflection sidecar (one per shader, with one `shaders:` entry
+       per slang). Zinc.Magic only needs to read the yamls; the per-stage sources are
+       resolved by `path:` lookup within AdditionalFiles. -->
   <Target Name="ZincCollectShaders" BeforeTargets="CoreCompile">
     <ItemGroup>
       <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*_reflection.yaml" />
       <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*.metal" />
+      <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*.hlsl" />
+      <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*.glsl" />
+      <AdditionalFiles Include="$(IntermediateOutputPath)shaders/*.wgsl" />
     </ItemGroup>
   </Target>
 </Project>

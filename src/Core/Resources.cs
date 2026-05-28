@@ -82,18 +82,24 @@ public static class Resources
 
     // A loadable custom sgp shader, shaped like Texture: an identifier (Name) plus a "source" that
     // Load() turns into the native sg_shader (Data) + its sgp pipeline. Where Texture's source is a
-    // file path (read at Load), a Shader's source is a backend->sg_shader factory compiled from
-    // sokol-shdc. Two-phase generation, NO registry: Zinc.Magic emits the `Res.Assets.<program>`
-    // handle from the .glsl alone (always IDE-available so you can code against a new shader before
-    // building), and the shdc build step wires the compiled factory onto that handle via SetFactory.
-    // The std140 uniform blocks are the generated record-structs under Res.Shaders.<program>.
+    // file path (read at Load), a Shader's source is one factory *per backend*, each compiled by
+    // sokol-shdc for that slang. Zinc.Magic emits one `Shader_<name>__<slang>.g.cs` per slang at
+    // build time, and each generated file's `[ModuleInitializer]` registers its factory under the
+    // matching `sg_backend` via `RegisterFactory`. Load() picks the one for the runtime backend.
+    //
+    // Two-phase generation, NO registry: the `Res.Assets.<program>` handle is emitted from the .glsl
+    // alone (always IDE-available so you can code against a new shader before building); the shdc
+    // build step wires the compiled factories onto that handle. The std140 uniform blocks are the
+    // generated record-structs under Res.Shaders.<program>.
     public record Shader
     {
         public string Name { get; init; } = "";
         /// <summary>The sgp built-in pipeline sentinel; the renderer skips set_pipeline for it.</summary>
         public bool IsDefault { get; init; }
 
-        private Func<sg_backend, sg_shader>? factory;
+        // One factory per backend. Keys are sg_backend values; the value is the compiled sg_shader_desc
+        // builder for that slang. Populated by generated ModuleInitializers at first touch of the type.
+        private readonly Dictionary<sg_backend, Func<sg_backend, sg_shader>> factories = new();
         private sg_pipeline pipeline;
 
         public bool Loaded { get; private set; }
@@ -105,19 +111,43 @@ public static class Resources
         private Shader() { }                  // sentinel only
         public Shader(string name) { Name = name; }
 
-        /// <summary>Generated-use: wires the build-compiled factory onto this stub handle. Not for hand use.</summary>
-        public void SetFactory(Func<sg_backend, sg_shader> factory) => this.factory = factory;
+        /// <summary>
+        /// Generated-use: register the build-compiled factory for a specific backend. Called from a
+        /// per-slang `[ModuleInitializer]` so the lookup is populated before any `Load()` runs.
+        /// Last write wins (a project replacing the shipped factory is rare but legal).
+        /// </summary>
+        public void RegisterFactory(sg_backend backend, Func<sg_backend, sg_shader> factory)
+            => factories[backend] = factory;
+
+        /// <summary>
+        /// Back-compat shim for older Zinc.Magic (pre-multi-slang) that emitted a single
+        /// `SetFactory(Make)` call without a backend tag. The pre-multi-slang generator only ever
+        /// emitted metal_macos, so register under that key. Remove once the minimum Zinc.Magic is
+        /// the multi-slang version.
+        /// </summary>
+        [Obsolete("Use RegisterFactory(sg_backend, factory). Kept for backwards compat with Zinc.Magic <= 1.0.7.")]
+        public void SetFactory(Func<sg_backend, sg_shader> factory)
+            => factories[sg_backend.SG_BACKEND_METAL_MACOS] = factory;
 
         /// <summary>Build the native sg_shader for the current backend and its sgp pipeline.</summary>
         public unsafe bool Load(bool forceReload = false)
         {
             if (Loaded && !forceReload) return true;
             if (IsDefault) return false;
-            if (factory is null)
+            if (factories.Count == 0)
                 throw new InvalidOperationException(
-                    $"Shader '{Name}' has no compiled backend — make sure res/shaders/{Name}.glsl was built " +
+                    $"Shader '{Name}' has no compiled backends — make sure res/shaders/{Name}.glsl was built " +
                     "(a real `dotnet build`, not a design-time/IntelliSense build).");
-            Data = factory(Gfx.query_backend());
+            var backend = Gfx.query_backend();
+            if (!factories.TryGetValue(backend, out var factory))
+            {
+                var have = string.Join(", ", factories.Keys);
+                throw new NotSupportedException(
+                    $"Shader '{Name}' wasn't compiled for runtime backend {backend}. " +
+                    $"Compiled backends: [{have}]. Adjust <ZincShaderSlang> in your csproj (or its " +
+                    $"default in Zinc.Shaders.targets) to include the matching slang.");
+            }
+            Data = factory(backend);
             sgp_pipeline_desc pd = default;
             pd.shader = Data;
             pd.has_vs_color = 1; // sgp's vertex layout carries the per-vertex color the shaders read
