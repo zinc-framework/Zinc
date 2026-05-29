@@ -7,10 +7,10 @@ namespace Zinc;
 //
 // sokol_gfx exposes no portable pixel readback (floooh/sokol#282 is still open even in the version we
 // build), so we dispatch on the active backend and hand the backend-native texture handle to a small
-// helper compiled into the stb lib, which does the backend-specific copy and then stbi_write_png.
+// helper compiled into the zinc_platform lib, which does the backend-specific copy and then stbi_write_png.
 //
 // Status by backend:
-//   - Metal (macOS/iOS): implemented & tested (see libs/stb/build/screenshot.m in Zinc.Bootstrapper).
+//   - Metal (macOS/iOS): implemented & tested (see libs/zinc_platform/build/screenshot.m in Zinc.Bootstrapper).
 //   - D3D11 (Windows) / GLCORE+GLES3 (Linux/web): the C# dispatch is here, and the native side is
 //     written, but those native paths are only compile-checked (no hardware to run them on). They need
 //     a Zinc.Bootstrapper rebuild for those RIDs + a real run to be considered verified.
@@ -19,17 +19,17 @@ namespace Zinc;
 // offscreen RenderTarget image (a normal, readable texture).
 internal static unsafe class ScreenshotWriter
 {
-    // --- native entry points (libstb) ---
+    // --- native entry points (zinc_platform) ---
     // Metal: blit the texture into a shared staging buffer on sokol's command queue, then write the PNG.
-    [DllImport("stb", EntryPoint = "zinc_write_texture_png", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("zinc_platform", EntryPoint = "zinc_write_texture_png", CallingConvention = CallingConvention.Cdecl)]
     private static extern int zinc_write_texture_png(void* mtlTexture, void* mtlQueue, byte* path, int flipY);
 
     // D3D11: copy to a STAGING texture, Map, swizzle, write the PNG.
-    [DllImport("stb", EntryPoint = "zinc_write_d3d11_texture_png", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("zinc_platform", EntryPoint = "zinc_write_d3d11_texture_png", CallingConvention = CallingConvention.Cdecl)]
     private static extern int zinc_write_d3d11_texture_png(void* device, void* context, void* tex2d, int width, int height, byte* path, int flipY);
 
     // GL/GLES: attach the texture to a temporary FBO, glReadPixels, write the PNG.
-    [DllImport("stb", EntryPoint = "zinc_write_gl_texture_png", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("zinc_platform", EntryPoint = "zinc_write_gl_texture_png", CallingConvention = CallingConvention.Cdecl)]
     private static extern int zinc_write_gl_texture_png(uint glTexture, int width, int height, byte* path, int flipY);
 
     /// <summary>

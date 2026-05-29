@@ -10,18 +10,23 @@ internal static class NativeLibResolver
     {
         public const string sokol = "sokol";
         public const string sokol_osx = "libs/runtimes/osx-arm64/native/libsokol.dylib";
-        public const string sokol_linux = "libsokol.dylib";
+        public const string sokol_linux = "libs/runtimes/linux-x64/native/libsokol.so";
         public const string sokol_win = "libs/runtimes/win-x64/native/sokol.dll";
 
         public const string box2d = "box2d";
         public const string box2d_osx = "libs/runtimes/osx-arm64/native/libbox2d.dylib";
-        public const string box2d_linux = "libbox2d.dylib";
+        public const string box2d_linux = "libs/runtimes/linux-x64/native/libbox2d.so";
         public const string box2d_win = "libs/runtimes/win-x64/native/box2d.dll";
 
         public const string stb = "stb";
         public const string stb_osx = "libs/runtimes/osx-arm64/native/libstb.dylib";
-        public const string stb_linux = "libstb.dylib";
+        public const string stb_linux = "libs/runtimes/linux-x64/native/libstb.so";
         public const string stb_win = "libs/runtimes/win-x64/native/stb.dll";
+
+        public const string zinc_platform = "zinc_platform";
+        public const string zinc_platform_osx = "libs/runtimes/osx-arm64/native/libzinc_platform.dylib";
+        public const string zinc_platform_linux = "libs/runtimes/linux-x64/native/libzinc_platform.so";
+        public const string zinc_platform_win = "libs/runtimes/win-x64/native/zinc_platform.dll";
     }
     
     static NativeLibResolver()
@@ -32,29 +37,30 @@ internal static class NativeLibResolver
 
     public static void kick(){}
     
+    // Pick the platform-specific path for a logical lib name. Each lib has a (win, osx, linux)
+    // triple; ForPlatform selects one.
+    //
+    // NB: do NOT use Environment.OSVersion.Platform here — it returns PlatformID.Unix on BOTH
+    // Linux and macOS, so Linux would resolve to the .dylib path and never load. RuntimeInformation
+    // distinguishes them correctly.
     static string GetLibraryName(string libraryName)
         => libraryName switch
         {
-            Constants.sokol => Environment.OSVersion.Platform switch
-            {
-                PlatformID.Win32NT => Constants.sokol_win,
-                PlatformID.Unix => Constants.sokol_osx,
-                _ => Constants.sokol_linux,
-            },
-            Constants.box2d => Environment.OSVersion.Platform switch
-            {
-                PlatformID.Win32NT => Constants.box2d_win,
-                PlatformID.Unix => Constants.box2d_osx,
-                _ => Constants.box2d_linux,
-            },
-            Constants.stb => Environment.OSVersion.Platform switch
-            {
-                PlatformID.Win32NT => Constants.stb_win,
-                PlatformID.Unix => Constants.stb_osx,
-                _ => Constants.stb_linux,
-            },
+            Constants.sokol         => ForPlatform(Constants.sokol_win,         Constants.sokol_osx,         Constants.sokol_linux),
+            Constants.box2d         => ForPlatform(Constants.box2d_win,         Constants.box2d_osx,         Constants.box2d_linux),
+            Constants.stb           => ForPlatform(Constants.stb_win,           Constants.stb_osx,           Constants.stb_linux),
+            Constants.zinc_platform => ForPlatform(Constants.zinc_platform_win, Constants.zinc_platform_osx, Constants.zinc_platform_linux),
             _ => libraryName,
         };
+
+    static string ForPlatform(string win, string osx, string linux)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return win;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))     return osx;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))   return linux;
+        // Unknown platform: hand the bare name to the loader and let default probing try.
+        return linux;
+    }
     
     public static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
