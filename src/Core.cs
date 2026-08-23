@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -28,6 +28,15 @@ public static partial class Engine
     static EntityUpdateSystem EntityUpdate = new ();
     static DebugOverlaySystem DebugOverlay = new ();
     public static string DebugTextStr = "";
+    /// <summary>
+    /// True when the window was created with a transparent (composited) background, i.e.
+    /// RunOptions.transparentWindow. The framebuffer is then cleared to fully transparent
+    /// each frame and whatever is behind the window shows through wherever nothing is drawn.
+    /// Supported on Windows (D3D11, via DirectComposition) and macOS (Metal); elsewhere the
+    /// window simply stays opaque.
+    /// </summary>
+    public static bool TransparentWindow { get; private set; }
+
     static Color ClearColor;
 
     public static void SetClearColor(Color c)
@@ -179,7 +188,7 @@ public static partial class Engine
     }
 
     
-    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null);
+    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false);
 
     private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
     public static void Run(RunOptions opts = null)
@@ -202,6 +211,13 @@ public static partial class Engine
     static internal void Boot(RunOptions opts)
     {
         NativeLibResolver.kick(); //inits the static lib resolver 
+        TransparentWindow = opts.transparentWindow;
+        if (TransparentWindow)
+        {
+            // GP.clear() paints an opaque fullscreen quad, which would defeat the whole point;
+            // the transparent clear is done by the render pass instead (see Frame()).
+            Clear = false;
+        }
         
         unsafe
         {
@@ -213,6 +229,11 @@ public static partial class Engine
                 desc.width = opts.width;
                 desc.height = opts.height;
                 desc.icon.sokol_default = 1;
+                if (opts.transparentWindow)
+                {
+                    // premultiplied-alpha compositing with whatever is behind the window
+                    desc.composite_mode = sapp_composite_mode.SAPP_COMPOSITEMODE_PREMULTIPLIED;
+                }
                 desc.window_title = (sbyte*)ptr;
                 desc.init_cb = &Initialize;
                 desc.event_cb = &Event;
@@ -617,7 +638,20 @@ public static partial class Engine
         // drawDebugText(DebugFont.C64,$"MYSTERY DUNGEON HAND PROTOTYPE");
 
         // setting this to load instead of clear allows us to toggle sokol_gp clearing
-        state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_LOAD;
+        if (TransparentWindow)
+        {
+            // Clear the swapchain to premultiplied transparent black. GP.clear() can't do this:
+            // it draws a blended quad, which can only ever raise the framebuffer's alpha.
+            state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_CLEAR;
+            state.pass_action.colors.e0.clear_value.r = 0f;
+            state.pass_action.colors.e0.clear_value.g = 0f;
+            state.pass_action.colors.e0.clear_value.b = 0f;
+            state.pass_action.colors.e0.clear_value.a = 0f;
+        }
+        else
+        {
+            state.pass_action.colors.e0.load_action = sg_load_action.SG_LOADACTION_LOAD;
+        }
         fixed (sg_pass_action* pass_ptr = &state.pass_action)
         {
             sg_pass pass = default;
