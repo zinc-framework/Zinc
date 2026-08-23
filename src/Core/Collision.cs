@@ -56,7 +56,7 @@ public static class Collision
         {
             fixed (b2Polygon* a_ptr = &ap.poly, b_ptr = &bp.poly)
             {
-                b2Manifold m = Box2D.b2CollidePolygons(a_ptr, IdentityXf, b_ptr, IdentityXf);
+                b2LocalManifold m = Box2D.b2CollidePolygons(a_ptr, b_ptr, IdentityXf);
                 return m.pointCount > 0;
             }
         }
@@ -78,7 +78,7 @@ public static class Collision
         {
             fixed (b2Polygon* p_ptr = &poly.poly)
             {
-                return Box2D.b2PointInPolygon(new b2Vec2 { x = point.X, y = point.Y }, p_ptr) != 0;
+                return Box2D.b2PointInPolygon(p_ptr, new b2Vec2 { x = point.X, y = point.Y }) != 0;
             }
         }
     }
@@ -110,8 +110,7 @@ public static class Collision
             input.proxyB.count = poly.poly.count;
             input.proxyB.radius = poly.poly.radius;
 
-            input.transformA = IdentityXf;
-            input.transformB = IdentityXf;
+            input.transform = IdentityXf;
             input.useRadii = 0;
 
             b2SimplexCache cache = default;
@@ -151,8 +150,7 @@ public static class Collision
             input.proxyB.count = bp.poly.count;
             input.proxyB.radius = bp.poly.radius;
 
-            input.transformA = IdentityXf;
-            input.transformB = IdentityXf;
+            input.transform = IdentityXf;
             input.useRadii = 0;
 
             b2SimplexCache cache = default;
@@ -174,7 +172,7 @@ public static class Collision
 
     public static CollisionInfo GetCollisionInfo(int entityA, Collider a, int entityB, Collider b)
     {
-        // CollisionInfo wraps a b2Manifold which is only produced by polygon
+        // CollisionInfo wraps a b2LocalManifold which is only produced by polygon
         // collisions. Point pairings should use CheckCollision + GetClosestPoints.
         if (a.IsPoint || b.IsPoint)
         {
@@ -188,7 +186,7 @@ public static class Collision
         {
             fixed (b2Polygon* a_ptr = &ap.poly, b_ptr = &bp.poly)
             {
-                b2Manifold m = Box2D.b2CollidePolygons(a_ptr, IdentityXf, b_ptr, IdentityXf);
+                b2LocalManifold m = Box2D.b2CollidePolygons(a_ptr, b_ptr, IdentityXf);
                 return new CollisionInfo(m);
             }
         }
@@ -200,7 +198,7 @@ public static class Collision
         public Vector2 RayFromAToB { get; init; }
         public Vector2 PointA { get; init; }
         public Vector2 PointB { get; init; }
-        public CollisionInfo(b2Manifold m)
+        public CollisionInfo(b2LocalManifold m)
         {
             Count = m.pointCount;
             // Box2D normal is on the manifold (not per-contact like cute's).
