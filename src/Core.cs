@@ -37,6 +37,28 @@ public static partial class Engine
     /// </summary>
     public static bool TransparentWindow { get; private set; }
 
+    static bool _wantImGuiDocking;
+
+    /// <summary>
+    /// Submit a full-viewport ImGui dock space each frame, so ImGui windows can be docked
+    /// anywhere over the app. Implies <c>Core.ImGUI.Docking</c> — a dock space is meaningless
+    /// without it, so turning this on turns that on too.
+    ///
+    /// The central area stays transparent (PassthruCentralNode), so the game keeps rendering
+    /// through the middle and docked panels frame it rather than cover it.
+    /// </summary>
+    public static bool ImGuiDockSpace
+    {
+        get => _imguiDockSpace;
+        set
+        {
+            _imguiDockSpace = value;
+            if (value) { Core.ImGUI.Docking = true; }
+        }
+    }
+    static bool _imguiDockSpace;
+    static bool _wantImGuiDockSpace;
+
     static Color ClearColor;
 
     public static void SetClearColor(Color c)
@@ -53,6 +75,11 @@ public static partial class Engine
     /// <summary>Default location screenshots are written to. Change it directly or via SetScreenshotPath.</summary>
     public static string ScreenshotPath = Path.Combine(AppContext.BaseDirectory, "screenshots", "zinc.png");
 
+    /// <summary>
+    /// Ask sokol_app to close the window and shut down cleanly at the end of the frame.
+    /// This is the only way out for a borderless window, which has no OS close button.
+    /// </summary>
+    public static void Quit() => Internal.Sokol.App.request_quit();
     /// <summary>Set the default screenshot output path (used by Screenshot() when no path is passed).</summary>
     public static void SetScreenshotPath(string path) => ScreenshotPath = path;
 
@@ -188,7 +215,7 @@ public static partial class Engine
     }
 
     
-    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false);
+    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false, bool imguiDocking = false, bool imguiDockSpace = false);
 
     private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
     public static void Run(RunOptions opts = null)
@@ -212,6 +239,8 @@ public static partial class Engine
     {
         NativeLibResolver.kick(); //inits the static lib resolver 
         TransparentWindow = opts.transparentWindow;
+        _wantImGuiDocking = opts.imguiDocking;
+        _wantImGuiDockSpace = opts.imguiDockSpace;
         if (TransparentWindow)
         {
             // GP.clear() paints an opaque fullscreen quad, which would defeat the whole point;
@@ -316,6 +345,8 @@ public static partial class Engine
     private static readonly byte[] _sokolGfxMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-gfx\0");
     private static readonly byte[] _sokolAppMenuTitle = System.Text.Encoding.UTF8.GetBytes("sokol-app\0");
     private static byte[] _screenshotButton = System.Text.Encoding.UTF8.GetBytes("Screenshot (F2)\0");
+    // plain ASCII on purpose: the default ImGui font has no glyph for the nicer multiply sign
+    private const string CloseButtonLabel = "X";
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static unsafe void Initialize()
@@ -337,6 +368,9 @@ public static partial class Engine
         simgui_desc_t imgui_desc = default;
         imgui_desc.logger.func = &Sokol_Logger;
         ImGUI.setup(&imgui_desc);
+        // ConfigFlags live on the ImGui context, so this has to happen after simgui_setup.
+        Core.ImGUI.Docking = _wantImGuiDocking;
+        ImGuiDockSpace = _wantImGuiDockSpace;
         
         sgimgui_desc_t sg_imgui_desc = default;
         GfxDebugGUI.sgimgui_setup(&sg_imgui_desc);
@@ -502,6 +536,13 @@ public static partial class Engine
         imgui_frame.dpi_scale = DPIScale;
         ImGUI.new_frame(&imgui_frame);
 
+        // Submitted before the menu bar and before any user window, so everything drawn this
+        // frame can dock into it. Cheap no-op when docking is off.
+        if (_imguiDockSpace)
+        {
+            Core.ImGUI.DockSpaceOverViewport();
+        }
+
         if(ShowMenu)
         {
             Core.ImGUI.BeginMainMenuBar();
@@ -511,6 +552,10 @@ public static partial class Engine
                 Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
                 Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
                 Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
+                bool docking = Core.ImGUI.Docking;
+                if (Core.ImGUI.Checkbox("ImGui Docking", ref docking)) { Core.ImGUI.Docking = docking; }
+                bool dockSpace = ImGuiDockSpace;
+                if (Core.ImGUI.Checkbox("ImGui Dock Space", ref dockSpace)) { ImGuiDockSpace = dockSpace; }
                 Core.ImGUI.EndMenu();
             }
 
@@ -525,6 +570,27 @@ public static partial class Engine
             }
 
             Core.ImGUI.SmallButton(ref _screenshotButton, () => Screenshot());
+
+            // When the OS frame is gone the menu bar *is* the title bar, so it has to carry
+            // the two things the frame used to provide: a way to close, and a way to drag.
+            if (DesktopWindow.Borderless)
+            {
+                // right-align a close button, allowing for the item spacing before it
+                float closeWidth = Core.ImGUI.CalcTextSize(CloseButtonLabel).X + 12f;
+                Core.ImGUI.SetCursorPosX(Core.ImGUI.WindowWidth - closeWidth - 8f);
+                if (Core.ImGUI.SmallButton(CloseButtonLabel))
+                {
+                    Quit();
+                }
+
+                // Drag the window by the bar itself. Guarded on IsAnyItemHovered so that
+                // clicking a menu or the close button opens/presses it instead of starting
+                // a drag -- only the empty stretch of bar is a drag handle.
+                if (Core.ImGUI.IsWindowHovered() && !Core.ImGUI.IsAnyItemHovered() && Core.ImGUI.IsMouseClicked(0))
+                {
+                    DesktopWindow.BeginDrag();
+                }
+            }
 
             Core.ImGUI.EndMainMenuBar();
         }
@@ -689,6 +755,11 @@ public static partial class Engine
                 cs.Cleanup();
             }
         }
+
+        // Start any window drag the UI asked for only now, with the frame fully rendered and
+        // committed. The OS move loop is a nested message loop that keeps pumping sokol frames,
+        // so kicking it off mid-frame would re-enter ImGui::NewFrame() inside the current frame.
+        DesktopWindow.PumpDeferredDrag();
 
         DestructionSystem.DestroyObjects();
 

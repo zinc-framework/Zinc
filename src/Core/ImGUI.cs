@@ -1,4 +1,4 @@
-using Zinc.Internal.Sokol;
+﻿using Zinc.Internal.Sokol;
 using System.Numerics;
 
 namespace Zinc.Core;
@@ -332,6 +332,96 @@ public static class ImGUI
     public static void Seperator()
     {
         Internal.Sokol.ImGUI.igSeparator();
+    }
+    // --- ImGui configuration -------------------------------------------------------
+
+    /// <summary>
+    /// Dear ImGui docking: drag a window by its tab/title onto another to dock it, or to a
+    /// screen edge to split. Purely internal to ImGui, so it works with sokol_imgui as-is.
+    /// Off by default (it changes how every ImGui window behaves); turn it on at boot with
+    /// <c>RunOptions.imguiDocking</c> or at runtime here / from the Zinc menu.
+    /// </summary>
+    public static unsafe bool Docking
+    {
+        get => (Internal.Sokol.ImGUI.igGetIO()->ConfigFlags & (int)ImGuiConfigFlags_.ImGuiConfigFlags_DockingEnable) != 0;
+        set
+        {
+            var io = Internal.Sokol.ImGUI.igGetIO();
+            if (value) { io->ConfigFlags |= (int)ImGuiConfigFlags_.ImGuiConfigFlags_DockingEnable; }
+            else { io->ConfigFlags &= ~(int)ImGuiConfigFlags_.ImGuiConfigFlags_DockingEnable; }
+        }
+    }
+
+    /// <summary>
+    /// Submit a dock space covering the whole main viewport, so ImGui windows can be docked
+    /// anywhere over the app rather than only onto each other. Must be called every frame,
+    /// before any window that wants to dock into it, and requires <see cref="Docking"/>.
+    ///
+    /// <paramref name="passthruCentralNode"/> defaults to true and matters a lot for a game:
+    /// without it the dock space fills its central (undocked) area with an opaque background,
+    /// hiding everything the engine just rendered. With it, the middle stays see-through and
+    /// docked panels frame the game instead of covering it.
+    ///
+    /// The dock space automatically respects the main menu bar, so panels sit below it.
+    /// </summary>
+    /// <returns>The dock space's ImGui ID, or 0 if docking is disabled.</returns>
+    public static unsafe uint DockSpaceOverViewport(bool passthruCentralNode = true)
+    {
+        // ImGui asserts if a dock space is submitted while docking is off
+        if (!Docking) { return 0; }
+        int flags = passthruCentralNode
+            ? (int)ImGuiDockNodeFlags_.ImGuiDockNodeFlags_PassthruCentralNode
+            : (int)ImGuiDockNodeFlags_.ImGuiDockNodeFlags_None;
+        return Internal.Sokol.ImGUI.igDockSpaceOverViewportEx(
+            0, Internal.Sokol.ImGUI.igGetMainViewport(), flags, null);
+    }
+    /// <summary>
+    /// Whether multi-viewport (dragging ImGui windows out into real OS windows) can be used.
+    /// Always false: sokol_imgui.h is a combined platform+renderer backend that never sets
+    /// ImGuiBackendFlags_PlatformHasViewports / RendererHasViewports, never fills in the
+    /// ImGuiPlatformIO Platform_*/Renderer_* window hooks, and renders only
+    /// igGetDrawData() (the main viewport). Setting ImGuiConfigFlags_ViewportsEnable would
+    /// make ImGui call those null hooks and crash. sokol_app is single-window by design, so
+    /// supporting it means writing a real platform+renderer backend, not flipping a flag.
+    /// Exposed as a property so callers can branch on it rather than hard-coding false.
+    /// </summary>
+    public static bool MultiViewportSupported => false;
+    // --- bits needed to build a custom title bar out of the main menu bar ---
+
+    /// <summary>Width of the current ImGui window, in points.</summary>
+    public static float WindowWidth => Internal.Sokol.ImGUI.igGetWindowWidth();
+
+    /// <summary>Move the layout cursor horizontally, e.g. to right-align the next widget.</summary>
+    public static void SetCursorPosX(float x) => Internal.Sokol.ImGUI.igSetCursorPosX(x);
+
+    /// <summary>True if the mouse is over the current window (title bar included).</summary>
+    public static bool IsWindowHovered() => Internal.Sokol.ImGUI.igIsWindowHovered(0) != 0;
+
+    /// <summary>True if the mouse is over any widget, i.e. a menu or button rather than bare bar.</summary>
+    public static bool IsAnyItemHovered() => Internal.Sokol.ImGUI.igIsAnyItemHovered() != 0;
+
+    /// <summary>True on the frame a mouse button goes down (0 = left).</summary>
+    public static bool IsMouseClicked(int button = 0) => Internal.Sokol.ImGUI.igIsMouseClicked(button) != 0;
+
+    /// <summary>Size the given text would occupy, for laying out right-aligned widgets.</summary>
+    public static unsafe Vector2 CalcTextSize(string text)
+    {
+        var b = System.Text.Encoding.UTF8.GetBytes(text + '\0');
+        fixed (byte* ptr = b)
+        {
+            var v = Internal.Sokol.ImGUI.igCalcTextSize((sbyte*)ptr);
+            return new Vector2(v.x, v.y);
+        }
+    }
+
+    /// <summary>Small button that reports its own click, for inline title-bar widgets.</summary>
+    public static unsafe bool SmallButton(string label)
+    {
+        var b = System.Text.Encoding.UTF8.GetBytes(label + '\0');
+        fixed (byte* ptr = b)
+        {
+            return Internal.Sokol.ImGUI.igSmallButton((sbyte*)ptr) != 0;
+        }
     }
     public static void BeginMainMenuBar() => Internal.Sokol.ImGUI.igBeginMainMenuBar();
     public static void EndMainMenuBar() => Internal.Sokol.ImGUI.igEndMainMenuBar();
