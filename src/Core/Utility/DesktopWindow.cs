@@ -39,6 +39,9 @@ public static class DesktopWindow
     [DllImport(LIB, EntryPoint = "zinc_window_set_click_through", CallingConvention = CallingConvention.Cdecl)]
     static extern unsafe int zinc_window_set_click_through(void* handle, int enable);
 
+    [DllImport(LIB, EntryPoint = "zinc_window_restore_wndproc", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_restore_wndproc(void* handle);
+
     [DllImport(LIB, EntryPoint = "zinc_window_set_position", CallingConvention = CallingConvention.Cdecl)]
     static extern unsafe int zinc_window_set_position(void* handle, int x, int y);
 
@@ -109,9 +112,16 @@ public static class DesktopWindow
 
     /// <summary>
     /// Let mouse input pass through to whatever is behind the window, for a purely
-    /// decorative companion. Best-effort on a transparent window: the compositing mode
-    /// those need is incompatible with the layered-window flag full pass-through wants,
-    /// so this stops the window claiming clicks but may not forward every event.
+    /// decorative companion. Works in both opaque and transparent modes.
+    ///
+    /// While this is on the window receives NO mouse input at all — its own UI included,
+    /// which is inherent to click-through rather than a limitation. Turn it off to interact
+    /// with the window again, so leave yourself a keyboard route back.
+    ///
+    /// Implemented on Windows by subclassing the window and answering WM_NCHITTEST with
+    /// HTTRANSPARENT. The usual WS_EX_LAYERED | WS_EX_TRANSPARENT pairing can't be used: the
+    /// layered flag conflicts with the WS_EX_NOREDIRECTIONBITMAP that composited windows
+    /// require, so it would fail on exactly the windows this is most wanted for.
     /// </summary>
     public static bool ClickThrough
     {
@@ -155,6 +165,13 @@ public static class DesktopWindow
         _dragRequested = false;
         Call(h => zinc_window_begin_drag((void*)h));
     }
+
+    /// <summary>
+    /// Undo the window subclass installed by <see cref="ClickThrough"/>. Only needed if the
+    /// native lib could be unloaded while the window lives on; normal shutdown doesn't
+    /// require it. No-op on macOS, which needs no subclass.
+    /// </summary>
+    public static bool RestoreWindowProc() => Call(h => zinc_window_restore_wndproc((void*)h));
 
     /// <summary>Move the window's top-left corner to a screen position, in physical pixels.</summary>
     public static bool SetPosition(int x, int y) => Call(h => zinc_window_set_position((void*)h, x, y));
