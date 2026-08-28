@@ -37,12 +37,11 @@ public static partial class Engine
     /// </summary>
     public static bool TransparentWindow { get; private set; }
 
-    static bool _wantImGuiDocking;
 
     /// <summary>
     /// Submit a full-viewport ImGui dock space each frame, so ImGui windows can be docked
-    /// anywhere over the app. Implies <c>Core.ImGUI.Docking</c> — a dock space is meaningless
-    /// without it, so turning this on turns that on too.
+    /// anywhere over the app. Docking itself is always enabled, so this is purely about whether
+    /// the full-viewport dock target exists.
     ///
     /// The central area stays transparent (PassthruCentralNode), so the game keeps rendering
     /// through the middle and docked panels frame it rather than cover it.
@@ -53,7 +52,6 @@ public static partial class Engine
         set
         {
             _imguiDockSpace = value;
-            if (value) { Core.ImGUI.Docking = true; }
         }
     }
     static bool _imguiDockSpace;
@@ -215,7 +213,7 @@ public static partial class Engine
     }
 
     
-    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false, bool imguiDocking = false, bool imguiDockSpace = false);
+    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false, bool imguiDockSpace = false);
 
     private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
     public static void Run(RunOptions opts = null)
@@ -239,7 +237,6 @@ public static partial class Engine
     {
         NativeLibResolver.kick(); //inits the static lib resolver 
         TransparentWindow = opts.transparentWindow;
-        _wantImGuiDocking = opts.imguiDocking;
         _wantImGuiDockSpace = opts.imguiDockSpace;
         if (TransparentWindow)
         {
@@ -369,7 +366,7 @@ public static partial class Engine
         imgui_desc.logger.func = &Sokol_Logger;
         ImGUI.setup(&imgui_desc);
         // ConfigFlags live on the ImGui context, so this has to happen after simgui_setup.
-        Core.ImGUI.Docking = _wantImGuiDocking;
+        Core.ImGUI.Docking = true;
         ImGuiDockSpace = _wantImGuiDockSpace;
         
         sgimgui_desc_t sg_imgui_desc = default;
@@ -552,8 +549,6 @@ public static partial class Engine
                 Core.ImGUI.Checkbox("Show IMGUI Demo", ref showIMGUIDemo);
                 Core.ImGUI.Checkbox("Draw Debug Overlay", ref drawDebugOverlay);
                 Core.ImGUI.Checkbox("Draw Debug Colliders", ref drawDebugColliders);
-                bool docking = Core.ImGUI.Docking;
-                if (Core.ImGUI.Checkbox("ImGui Docking", ref docking)) { Core.ImGUI.Docking = docking; }
                 bool dockSpace = ImGuiDockSpace;
                 if (Core.ImGUI.Checkbox("ImGui Dock Space", ref dockSpace)) { ImGuiDockSpace = dockSpace; }
                 Core.ImGUI.EndMenu();

@@ -338,8 +338,9 @@ public static class ImGUI
     /// <summary>
     /// Dear ImGui docking: drag a window by its tab/title onto another to dock it, or to a
     /// screen edge to split. Purely internal to ImGui, so it works with sokol_imgui as-is.
-    /// Off by default (it changes how every ImGui window behaves); turn it on at boot with
-    /// <c>RunOptions.imguiDocking</c> or at runtime here / from the Zinc menu.
+    /// Zinc enables this unconditionally at startup — it costs nothing when unused and
+    /// there's no reason to make callers opt in. Settable here if something needs it off.
+    /// For a full-viewport dock target, see <c>Engine.ImGuiDockSpace</c>.
     /// </summary>
     public static unsafe bool Docking
     {
