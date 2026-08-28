@@ -118,10 +118,10 @@ public static class DesktopWindow
     /// which is inherent to click-through rather than a limitation. Turn it off to interact
     /// with the window again, so leave yourself a keyboard route back.
     ///
-    /// Implemented on Windows by subclassing the window and answering WM_NCHITTEST with
-    /// HTTRANSPARENT. The usual WS_EX_LAYERED | WS_EX_TRANSPARENT pairing can't be used: the
-    /// layered flag conflicts with the WS_EX_NOREDIRECTIONBITMAP that composited windows
-    /// require, so it would fail on exactly the windows this is most wanted for.
+    /// Implemented on Windows with WS_EX_LAYERED | WS_EX_TRANSPARENT. Both are required:
+    /// WS_EX_TRANSPARENT alone does nothing for input, and WM_NCHITTEST/HTTRANSPARENT only
+    /// forwards hit-tests to windows in the same thread, so it can't reach another
+    /// application at all. Verified working in both opaque and transparent modes.
     /// </summary>
     public static bool ClickThrough
     {
