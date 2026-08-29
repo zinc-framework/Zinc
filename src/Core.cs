@@ -240,7 +240,7 @@ public static partial class Engine
     static internal void Boot(RunOptions opts)
     {
         NativeLibResolver.kick(); //inits the static lib resolver 
-        Window = opts.window ?? WindowOptions.Default;
+        Window = opts.window ?? new WindowOptions();
         _wantImGuiDockSpace = opts.imguiDockSpace;
         if (Window.Transparent)
         {
@@ -372,11 +372,11 @@ public static partial class Engine
         Core.ImGUI.Docking = true;
 
         // Chrome has to wait until here: DesktopWindow needs the native window handle, which
-        // doesn't exist until sokol_app has created the window. Only touched when it differs
-        // from the default, so a plain app never calls into zinc_platform at all.
-        if (Window.Borderless) { DesktopWindow.Borderless = true; }
-        if (Window.Topmost) { DesktopWindow.Topmost = true; }
-        if (!Window.ShowInTaskbar) { DesktopWindow.ShowInTaskbar = false; }
+        // doesn't exist until sokol_app has created the window. Going through
+        // ApplyWindowOptions rather than poking DesktopWindow keeps Engine.Window and the
+        // real window in step from the very first application.
+        _windowCreated = true;
+        ApplyWindowOptions(Window);
         ImGuiDockSpace = _wantImGuiDockSpace;
         
         sgimgui_desc_t sg_imgui_desc = default;
@@ -704,7 +704,7 @@ public static partial class Engine
         // drawDebugText(DebugFont.C64,$"MYSTERY DUNGEON HAND PROTOTYPE");
 
         // setting this to load instead of clear allows us to toggle sokol_gp clearing
-        if (TransparentWindow)
+        if (Window.Transparent)
         {
             // Clear the swapchain to premultiplied transparent black. GP.clear() can't do this:
             // it draws a blended quad, which can only ever raise the framebuffer's alpha.
