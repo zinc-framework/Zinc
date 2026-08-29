@@ -13,12 +13,17 @@ namespace Zinc;
 /// zinc_platform native lib instead of in our sokol fork. See
 /// Zinc.Bootstrapper/libs/zinc_platform/build/zinc_window.{c,m}.
 ///
-/// Pair with <c>RunOptions.transparentWindow</c> for the full effect: transparency makes
-/// the background disappear, <see cref="Borderless"/> makes the frame disappear.
+/// actions and queries that carry no state: dragging, positioning, work-area lookup.
 ///
-/// Every setter is safe to call on any platform and simply reports false where the
-/// platform doesn't implement it. Currently: Windows implemented, macOS written but not
-/// yet verified on hardware, Linux stubbed.
+/// See <see cref="Engine.WindowOptions"/> for the shape settings themselves.
+///
+/// Every call is safe on any platform and simply reports false where the platform doesn't
+/// implement it. Currently: Windows implemented, macOS written but not yet verified on
+/// hardware, Linux stubbed.
+///
+/// The window-shape calls are internal on purpose: they're stateless pokes at the native
+/// window, and Engine.ApplyWindowOptions is the only thing that should drive them, so that
+/// Engine.Window can't disagree with the real window. What stays public here are the
 /// </summary>
 public static class DesktopWindow
 {
@@ -73,37 +78,28 @@ public static class DesktopWindow
 
 
     /// <summary>
-    /// Remove the OS title bar and frame. Toggling back restores them. The *client* area
-    /// keeps its size across the change, so the rendered surface doesn't jump.
+    /// Remove the OS title bar and frame, or put them back. The *client* area keeps its size
+    /// across the change, so the rendered surface doesn't jump.
     ///
     /// NOTE on Windows: sokol's fullscreen path rewrites the window style wholesale, so if
-    /// you toggle fullscreen after going borderless, set this again afterwards.
+    /// you toggle fullscreen after going borderless, apply the options again afterwards.
     /// </summary>
-    public static bool Borderless
-    {
-        get;
-        set { if (Call(h => zinc_window_set_borderless((void*)h, value ? 1 : 0))) field = value; }
-    }
+    internal static bool SetBorderless(bool borderless) =>
+        Call(h => zinc_window_set_borderless((void*)h, borderless ? 1 : 0));
 
 
-    /// <summary>Keep the window above normal windows.</summary>
-    public static bool Topmost
-    {
-        get;
-        set { if (Call(h => zinc_window_set_topmost((void*)h, value ? 1 : 0))) field = value; }
-    }
+    /// <summary>Keep the window above normal windows, or stop doing so.</summary>
+    internal static bool SetTopmost(bool topmost) =>
+        Call(h => zinc_window_set_topmost((void*)h, topmost ? 1 : 0));
 
 
     /// <summary>
     /// Whether the window appears in the taskbar / Alt-Tab. Windows only — on macOS, Dock
-    /// presence is an application-wide setting rather than a per-window one, so this is a
-    /// no-op there and the value stays unchanged.
+    /// presence is an application-wide setting rather than a per-window one, so this reports
+    /// false there and changes nothing.
     /// </summary>
-    public static bool ShowInTaskbar
-    {
-        get;
-        set { if (Call(h => zinc_window_set_taskbar_visible((void*)h, value ? 1 : 0))) field = value; }
-    } = true;
+    internal static bool SetTaskbarVisible(bool visible) =>
+        Call(h => zinc_window_set_taskbar_visible((void*)h, visible ? 1 : 0));
 
 
     /// <summary>
@@ -119,11 +115,8 @@ public static class DesktopWindow
     /// forwards hit-tests to windows in the same thread, so it can't reach another
     /// application at all. Verified working in both opaque and transparent modes.
     /// </summary>
-    public static bool ClickThrough
-    {
-        get;
-        set { if (Call(h => zinc_window_set_click_through((void*)h, value ? 1 : 0))) field = value; }
-    }
+    internal static bool SetClickThrough(bool enable) =>
+        Call(h => zinc_window_set_click_through((void*)h, enable ? 1 : 0));
 
     static bool _dragRequested;
 

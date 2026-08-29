@@ -42,8 +42,8 @@ public static partial class Engine
     /// </summary>
     public static bool ClickThrough
     {
-        get => DesktopWindow.ClickThrough;
-        set => DesktopWindow.ClickThrough = value;
+        get;
+        set { if (DesktopWindow.SetClickThrough(value)) field = value; }
     }
 
     /// <summary>
@@ -573,7 +573,7 @@ public static partial class Engine
 
             // When the OS frame is gone the menu bar *is* the title bar, so it has to carry
             // the two things the frame used to provide: a way to close, and a way to drag.
-            if (DesktopWindow.Borderless)
+            if (Window.Borderless)
             {
                 // right-align a close button, allowing for the item spacing before it
                 float closeWidth = Core.ImGUI.CalcTextSize(CloseButtonLabel).X + 12f;

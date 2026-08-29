@@ -1,4 +1,4 @@
-namespace Zinc;
+﻿namespace Zinc;
 
 // Window shape settings. Split out of Core.cs so the knobs an app actually configures are
 // easy to find; Engine is a static partial class, so these stay reachable as
@@ -27,29 +27,15 @@ public static partial class Engine
     /// <param name="Borderless">Drop the OS title bar and frame.</param>
     /// <param name="Topmost">Keep the window above normal windows.</param>
     /// <param name="ShowInTaskbar">Whether the window appears in the taskbar and Alt-Tab.</param>
-    public record WindowOptions(
-        bool Transparent = false,
-        bool Borderless = false,
-        bool Topmost = false,
-        bool ShowInTaskbar = true)
-    {
-        /// <summary>
-        /// The "desktop companion" shape: a see-through, frameless, always-on-top window that
-        /// stays out of the taskbar, for something that lives on the desktop rather than in a
-        /// window frame. Pair with <see cref="Engine.ClickThrough"/> for a purely decorative one.
-        /// </summary>
-        public static WindowOptions Companion { get; } =
-            new(Transparent: true, Borderless: true, Topmost: true, ShowInTaskbar: false);
-    }
+    public record WindowOptions(bool Transparent = false, bool Borderless = false, bool Topmost = false, bool ShowInTaskbar = true);
 
     /// <summary>
     /// The options most recently passed to <see cref="ApplyWindowOptions"/>, or given to
     /// RunOptions at startup.
     ///
-    /// This records what was *applied*; it is not a live query of the window. It stays
-    /// accurate as long as the window's shape is only changed through ApplyWindowOptions.
-    /// Reaching past it to <see cref="DesktopWindow"/> will leave it stale — that's the
-    /// trade for DesktopWindow remaining available for one-off pokes.
+    /// This records what was *applied*; it is not a live query of the window. Nothing else
+    /// can change the window's shape — the native calls behind it are internal to the engine
+    /// and ApplyWindowOptions is their only caller — so the two can't drift.
     /// </summary>
     public static WindowOptions Window { get; private set; } = new();
 
@@ -78,9 +64,9 @@ public static partial class Engine
             options = options with { Transparent = Window.Transparent };
         }
 
-        DesktopWindow.Borderless = options.Borderless;
-        DesktopWindow.Topmost = options.Topmost;
-        DesktopWindow.ShowInTaskbar = options.ShowInTaskbar;
+        DesktopWindow.SetBorderless(options.Borderless);
+        DesktopWindow.SetTopmost(options.Topmost);
+        DesktopWindow.SetTaskbarVisible(options.ShowInTaskbar);
 
         Window = options;
     }
