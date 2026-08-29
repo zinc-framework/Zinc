@@ -28,50 +28,6 @@ public static partial class Engine
     static EntityUpdateSystem EntityUpdate = new ();
     static DebugOverlaySystem DebugOverlay = new ();
     public static string DebugTextStr = "";
-    /// <summary>
-    /// How the window itself is created and decorated. Pass one to RunOptions; the default
-    /// is an ordinary opaque window with a title bar.
-    ///
-    /// These are window *creation and chrome* settings, fixed for the life of the window or
-    /// changed deliberately through <see cref="DesktopWindow"/>. Transient behaviour like
-    /// click-through is not here — see <see cref="Engine.ClickThrough"/>.
-    /// </summary>
-    /// <param name="Transparent">
-    /// Composited, see-through background: the framebuffer is cleared to fully transparent
-    /// each frame and whatever is behind the window shows through wherever nothing is drawn.
-    /// Windows (D3D11, via DirectComposition) and macOS (Metal); elsewhere the window stays
-    /// opaque and everything else still works. Must be decided before the window is created,
-    /// which is why it lives here rather than on DesktopWindow.
-    /// </param>
-    /// <param name="Borderless">Drop the OS title bar and frame.</param>
-    /// <param name="Topmost">Keep the window above normal windows.</param>
-    /// <param name="ShowInTaskbar">Whether the window appears in the taskbar and Alt-Tab.</param>
-    public record WindowOptions(
-        bool Transparent = false,
-        bool Borderless = false,
-        bool Topmost = false,
-        bool ShowInTaskbar = true)
-    {
-        /// <summary>An ordinary opaque window with a title bar. Used when RunOptions doesn't name one.</summary>
-        public static WindowOptions Default { get; } = new();
-
-        /// <summary>
-        /// The "desktop companion" shape: a see-through, frameless, always-on-top window that
-        /// stays out of the taskbar, for something that lives on the desktop rather than in a
-        /// window frame. Pair with <see cref="Engine.ClickThrough"/> for a purely decorative one.
-        /// </summary>
-        public static WindowOptions Companion { get; } =
-            new(Transparent: true, Borderless: true, Topmost: true, ShowInTaskbar: false);
-    }
-
-    /// <summary>The WindowOptions this app was launched with. Never null once Boot has run.</summary>
-    public static WindowOptions Window { get; private set; } = WindowOptions.Default;
-
-    /// <summary>
-    /// Shorthand for <c>Engine.Window.Transparent</c> — true when the framebuffer is cleared
-    /// to transparent each frame rather than to the clear colour.
-    /// </summary>
-    public static bool TransparentWindow => Window.Transparent;
 
     /// <summary>
     /// Let mouse input pass through to whatever is behind the window, so the app is visible
@@ -89,7 +45,6 @@ public static partial class Engine
         get => DesktopWindow.ClickThrough;
         set => DesktopWindow.ClickThrough = value;
     }
-
 
     /// <summary>
     /// Submit a full-viewport ImGui dock space each frame, so ImGui windows can be docked
@@ -265,16 +220,6 @@ public static partial class Engine
         hasScenesStagedForUnmounting = true;
     }
 
-    
-    public record RunOptions(
-        int width,
-        int height,
-        string appName,
-        Action setup = null,
-        Action update = null,
-        bool imguiDockSpace = false,
-        WindowOptions window = null);
-
     private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
     public static void Run(RunOptions opts = null)
     {
@@ -291,7 +236,6 @@ public static partial class Engine
         }
         Boot(opts == null ? defaultOpts : opts);
     }
-
 
     static internal void Boot(RunOptions opts)
     {
@@ -385,7 +329,6 @@ public static partial class Engine
         public sg_image img;
     }
     
-    
     internal struct FontState
     {
         public unsafe void* FONSContext;
@@ -457,7 +400,6 @@ public static partial class Engine
             
         ClearColor = new Color(Palettes.ONE_BIT_MONITOR_GLOW[0]);
         
-        
         // a checkerboard texture
         var checkerboardTexSize = 128;
         var checkSize = checkerboardTexSize / 8;
@@ -511,7 +453,6 @@ public static partial class Engine
         GlobalScene = new(){Name = "Global Scene"};
         Console.WriteLine("assigned global scene");
 
-        
         //USE SOKOL_FONTSTASH - NOT WORKING BECAUSE CANT GENERATE FONTSTASH.H BINDINGS
         // sfons_desc_t font_desc = default;
         // font_desc.width = 128;
@@ -537,7 +478,6 @@ public static partial class Engine
         font_state.FONSContext = Fontstash.create(&font_desc);
         Console.WriteLine("fontstash setup");
 
-        
         GlobalScene.Mount(-1);
         GlobalScene.Load(() => {GlobalScene.Start();});
         Console.WriteLine("global scene mounted");
@@ -559,7 +499,6 @@ public static partial class Engine
         }
     }
 
-
     public static int Width;
     public static int Height;
     public static float DPIScale;
@@ -570,7 +509,6 @@ public static partial class Engine
     public static ulong FrameCount;
     public static double DeltaTime;
     public static double Time;
-
 
     public static bool showStats = true;
     public static bool showIMGUIDemo = false;
@@ -1202,7 +1140,6 @@ public static partial class Engine
     //     }
     // }
     
-
     public static bool LoadImage(string path, out int width, out int height, out sg_image img)
     {
         var fileBytes = File.ReadAllBytes(path);
