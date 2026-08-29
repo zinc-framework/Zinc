@@ -196,15 +196,4 @@ public static class DesktopWindow
         return true;
     }
 
-    /// <summary>
-    /// One-call setup for the usual desktop-companion shape: frameless, always on top, and
-    /// (optionally) out of the taskbar. Combine with RunOptions.transparentWindow for the
-    /// see-through background. Call from your setup callback or any time after boot.
-    /// </summary>
-    public static void CompanionMode(bool topmost = true, bool hideFromTaskbar = true)
-    {
-        Borderless = true;
-        Topmost = topmost;
-        if (hideFromTaskbar) ShowInTaskbar = false;
-    }
 }

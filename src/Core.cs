@@ -29,13 +29,66 @@ public static partial class Engine
     static DebugOverlaySystem DebugOverlay = new ();
     public static string DebugTextStr = "";
     /// <summary>
-    /// True when the window was created with a transparent (composited) background, i.e.
-    /// RunOptions.transparentWindow. The framebuffer is then cleared to fully transparent
-    /// each frame and whatever is behind the window shows through wherever nothing is drawn.
-    /// Supported on Windows (D3D11, via DirectComposition) and macOS (Metal); elsewhere the
-    /// window simply stays opaque.
+    /// How the window itself is created and decorated. Pass one to RunOptions; the default
+    /// is an ordinary opaque window with a title bar.
+    ///
+    /// These are window *creation and chrome* settings, fixed for the life of the window or
+    /// changed deliberately through <see cref="DesktopWindow"/>. Transient behaviour like
+    /// click-through is not here — see <see cref="Engine.ClickThrough"/>.
     /// </summary>
-    public static bool TransparentWindow { get; private set; }
+    /// <param name="Transparent">
+    /// Composited, see-through background: the framebuffer is cleared to fully transparent
+    /// each frame and whatever is behind the window shows through wherever nothing is drawn.
+    /// Windows (D3D11, via DirectComposition) and macOS (Metal); elsewhere the window stays
+    /// opaque and everything else still works. Must be decided before the window is created,
+    /// which is why it lives here rather than on DesktopWindow.
+    /// </param>
+    /// <param name="Borderless">Drop the OS title bar and frame.</param>
+    /// <param name="Topmost">Keep the window above normal windows.</param>
+    /// <param name="ShowInTaskbar">Whether the window appears in the taskbar and Alt-Tab.</param>
+    public record WindowOptions(
+        bool Transparent = false,
+        bool Borderless = false,
+        bool Topmost = false,
+        bool ShowInTaskbar = true)
+    {
+        /// <summary>An ordinary opaque window with a title bar. Used when RunOptions doesn't name one.</summary>
+        public static WindowOptions Default { get; } = new();
+
+        /// <summary>
+        /// The "desktop companion" shape: a see-through, frameless, always-on-top window that
+        /// stays out of the taskbar, for something that lives on the desktop rather than in a
+        /// window frame. Pair with <see cref="Engine.ClickThrough"/> for a purely decorative one.
+        /// </summary>
+        public static WindowOptions Companion { get; } =
+            new(Transparent: true, Borderless: true, Topmost: true, ShowInTaskbar: false);
+    }
+
+    /// <summary>The WindowOptions this app was launched with. Never null once Boot has run.</summary>
+    public static WindowOptions Window { get; private set; } = WindowOptions.Default;
+
+    /// <summary>
+    /// Shorthand for <c>Engine.Window.Transparent</c> — true when the framebuffer is cleared
+    /// to transparent each frame rather than to the clear colour.
+    /// </summary>
+    public static bool TransparentWindow => Window.Transparent;
+
+    /// <summary>
+    /// Let mouse input pass through to whatever is behind the window, so the app is visible
+    /// but not clickable. Unlike <see cref="WindowOptions"/> this is meant to be flipped at
+    /// runtime — a companion might be interactive while hovered and inert otherwise — so it
+    /// lives here rather than in the creation-time options.
+    ///
+    /// While this is on the window receives NO mouse input at all, its own UI included. That
+    /// is what click-through means, so leave yourself a non-mouse route back: once the click
+    /// lands on another app, that app takes focus and in-window key bindings stop arriving.
+    /// A real companion app wants a global hotkey.
+    /// </summary>
+    public static bool ClickThrough
+    {
+        get => DesktopWindow.ClickThrough;
+        set => DesktopWindow.ClickThrough = value;
+    }
 
 
     /// <summary>
@@ -213,7 +266,14 @@ public static partial class Engine
     }
 
     
-    public record RunOptions(int width, int height, string appName, Action setup = null, Action update = null, bool transparentWindow = false, bool imguiDockSpace = false);
+    public record RunOptions(
+        int width,
+        int height,
+        string appName,
+        Action setup = null,
+        Action update = null,
+        bool imguiDockSpace = false,
+        WindowOptions window = null);
 
     private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
     public static void Run(RunOptions opts = null)
@@ -236,9 +296,9 @@ public static partial class Engine
     static internal void Boot(RunOptions opts)
     {
         NativeLibResolver.kick(); //inits the static lib resolver 
-        TransparentWindow = opts.transparentWindow;
+        Window = opts.window ?? WindowOptions.Default;
         _wantImGuiDockSpace = opts.imguiDockSpace;
-        if (TransparentWindow)
+        if (Window.Transparent)
         {
             // GP.clear() paints an opaque fullscreen quad, which would defeat the whole point;
             // the transparent clear is done by the render pass instead (see Frame()).
@@ -255,7 +315,7 @@ public static partial class Engine
                 desc.width = opts.width;
                 desc.height = opts.height;
                 desc.icon.sokol_default = 1;
-                if (opts.transparentWindow)
+                if (Window.Transparent)
                 {
                     // premultiplied-alpha compositing with whatever is behind the window
                     desc.composite_mode = sapp_composite_mode.SAPP_COMPOSITEMODE_PREMULTIPLIED;
@@ -367,6 +427,13 @@ public static partial class Engine
         ImGUI.setup(&imgui_desc);
         // ConfigFlags live on the ImGui context, so this has to happen after simgui_setup.
         Core.ImGUI.Docking = true;
+
+        // Chrome has to wait until here: DesktopWindow needs the native window handle, which
+        // doesn't exist until sokol_app has created the window. Only touched when it differs
+        // from the default, so a plain app never calls into zinc_platform at all.
+        if (Window.Borderless) { DesktopWindow.Borderless = true; }
+        if (Window.Topmost) { DesktopWindow.Topmost = true; }
+        if (!Window.ShowInTaskbar) { DesktopWindow.ShowInTaskbar = false; }
         ImGuiDockSpace = _wantImGuiDockSpace;
         
         sgimgui_desc_t sg_imgui_desc = default;
