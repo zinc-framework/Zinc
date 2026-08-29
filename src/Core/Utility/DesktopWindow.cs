@@ -71,7 +71,6 @@ public static class DesktopWindow
         catch (EntryPointNotFoundException) { return false; }
     }
 
-    static bool _borderless;
 
     /// <summary>
     /// Remove the OS title bar and frame. Toggling back restores them. The *client* area
@@ -82,20 +81,18 @@ public static class DesktopWindow
     /// </summary>
     public static bool Borderless
     {
-        get => _borderless;
-        set { if (Call(h => zinc_window_set_borderless((void*)h, value ? 1 : 0))) _borderless = value; }
+        get;
+        set { if (Call(h => zinc_window_set_borderless((void*)h, value ? 1 : 0))) field = value; }
     }
 
-    static bool _topmost;
 
     /// <summary>Keep the window above normal windows.</summary>
     public static bool Topmost
     {
-        get => _topmost;
-        set { if (Call(h => zinc_window_set_topmost((void*)h, value ? 1 : 0))) _topmost = value; }
+        get;
+        set { if (Call(h => zinc_window_set_topmost((void*)h, value ? 1 : 0))) field = value; }
     }
 
-    static bool _showInTaskbar = true;
 
     /// <summary>
     /// Whether the window appears in the taskbar / Alt-Tab. Windows only — on macOS, Dock
@@ -104,11 +101,10 @@ public static class DesktopWindow
     /// </summary>
     public static bool ShowInTaskbar
     {
-        get => _showInTaskbar;
-        set { if (Call(h => zinc_window_set_taskbar_visible((void*)h, value ? 1 : 0))) _showInTaskbar = value; }
-    }
+        get;
+        set { if (Call(h => zinc_window_set_taskbar_visible((void*)h, value ? 1 : 0))) field = value; }
+    } = true;
 
-    static bool _clickThrough;
 
     /// <summary>
     /// Let mouse input pass through to whatever is behind the window, for a purely
@@ -125,8 +121,8 @@ public static class DesktopWindow
     /// </summary>
     public static bool ClickThrough
     {
-        get => _clickThrough;
-        set { if (Call(h => zinc_window_set_click_through((void*)h, value ? 1 : 0))) _clickThrough = value; }
+        get;
+        set { if (Call(h => zinc_window_set_click_through((void*)h, value ? 1 : 0))) field = value; }
     }
 
     static bool _dragRequested;

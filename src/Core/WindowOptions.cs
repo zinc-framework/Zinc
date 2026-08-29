@@ -31,14 +31,6 @@ public static partial class Engine
     {
         /// <summary>An ordinary opaque window with a title bar. Used when RunOptions doesn't name one.</summary>
         public static WindowOptions Default { get; } = new();
-
-        /// <summary>
-        /// The "desktop companion" shape: a see-through, frameless, always-on-top window that
-        /// stays out of the taskbar, for something that lives on the desktop rather than in a
-        /// window frame. Pair with <see cref="Engine.ClickThrough"/> for a purely decorative one.
-        /// </summary>
-        public static WindowOptions Companion { get; } =
-            new(Transparent: true, Borderless: true, Topmost: true, ShowInTaskbar: false);
     }
 
     /// <summary>The WindowOptions this app was launched with. Never null once Boot has run.</summary>
