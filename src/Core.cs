@@ -47,6 +47,64 @@ public static partial class Engine
     }
 
     /// <summary>
+    /// True while a resize has been asked for but the engine's idea of its own size has not
+    /// caught up yet.
+    ///
+    /// Resizing the window is not instant from the engine's point of view. The OS applies it
+    /// immediately - the client rect really is the new size the moment SetClientSize returns -
+    /// but sokol deliberately recomputes its framebuffer size at the END of a frame loop
+    /// iteration rather than in WM_SIZE ("it explodes memory usage"), which lands after the
+    /// frame callback has already run. So <see cref="Width"/>/<see cref="Height"/> keep
+    /// reporting the OLD size for two frames: they are read at the top of a frame, and the
+    /// first one to see the new value is the frame after the one where sokol noticed.
+    ///
+    /// Anything that BAKES a size - a scene's Create(), a screenshot's render target - must
+    /// wait this out or it captures a number that was never true. Anything that merely reads
+    /// a size per frame does not care: the swapchain is still the old size too, so a settling
+    /// frame is internally consistent and simply renders stretched for a moment.
+    /// </summary>
+    public static bool WindowSettling => _settleFramesLeft > 0;
+
+    // Frames left before the settle is abandoned. A settle normally ends when Window.Resized
+    // arrives; this bound exists so that a resize which never produces one - the OS coalesced
+    // it, or the size turned out not to change after all - degrades to a stale value instead
+    // of wedging the engine forever.
+    static int _settleFramesLeft;
+    static (int w, int h) _settleFromSize;
+    const int SettleFrameBudget = 10;
+
+    // Scenes whose Create() is waiting for a frame where the size can be trusted.
+    static readonly List<Scene> pendingSceneStarts = new();
+
+    /// <summary>
+    /// Note that a resize is in flight, so size-baking work holds off until it lands. Called by
+    /// the window calls that actually change the size; moving a window does not need it.
+    /// </summary>
+    internal static void BeginWindowSettle()
+    {
+        _settleFromSize = (Width, Height);
+        _settleFramesLeft = SettleFrameBudget;
+    }
+
+    /// <summary>Queue a scene's Create() for the next frame whose size can be trusted.</summary>
+    internal static void DeferSceneStart(Scene s)
+    {
+        if (!pendingSceneStarts.Contains(s)) { pendingSceneStarts.Add(s); }
+    }
+
+    // Runs at the top of a frame, after Width/Height have been refreshed, so a scene's Create()
+    // sees the same values every later frame will.
+    static void DrainPendingSceneStarts()
+    {
+        if (pendingSceneStarts.Count == 0 || WindowSettling) { return; }
+        // Copy first: a Create() is free to mount and start another scene, which would otherwise
+        // mutate the list mid-iteration. Anything added that way is picked up next frame.
+        var starting = pendingSceneStarts.ToArray();
+        pendingSceneStarts.Clear();
+        foreach (var scene in starting) { scene.RunDeferredStart(); }
+    }
+
+    /// <summary>
     /// The drawable size to return to when <see cref="Fullscreen"/> is switched off, in the same
     /// units as <see cref="Width"/>/<see cref="Height"/>. Null (the default) means "whatever the
     /// window was before it went fullscreen", which is captured on the way in.
@@ -95,6 +153,7 @@ public static partial class Engine
                 _preFullscreenClient = DesktopWindow.GetClientSize(out var cw, out var ch) ? (cw, ch) : null;
                 _preFullscreenFramebuffer = (Width, Height);
                 App.toggle_fullscreen();
+                BeginWindowSettle();
                 return;
             }
 
@@ -120,6 +179,7 @@ public static partial class Engine
             }
 
             if (target is (int sw, int sh)) { DesktopWindow.SetClientSize(sw, sh); }
+            BeginWindowSettle();
         }
     }
 
@@ -607,6 +667,17 @@ public static partial class Engine
         Width = App.width();
         Height = App.height();
 
+        // A settle ends the moment the reported size actually moves. Watching the value itself
+        // rather than Window.Resized is deliberate: that event is dispatched during the update
+        // phase, one frame after the value it announces, so waiting on it would hold Create()
+        // back an extra frame for nothing. The frame budget is the backstop for a resize that
+        // never changes the size at all.
+        if (_settleFramesLeft > 0)
+        {
+            _settleFramesLeft = (Width, Height) != _settleFromSize ? 0 : _settleFramesLeft - 1;
+        }
+        DrainPendingSceneStarts();
+
         Fontstash.fonsClearState(font_state.FONSContext);
 
         simgui_frame_desc_t imgui_frame = default;
@@ -781,7 +852,10 @@ public static partial class Engine
         // recording (like the framebuffer demo) so its offscreen pass is committed with the frame below;
         // the readback then happens after Gfx.commit(). RenderTarget.Render defaults to upright,
         // on-screen coords (it imposes no projection), so the captured world matches the live frame.
-        if (screenshotPending)
+        // Held during a settle: the target is sized from Width/Height, so capturing now would
+        // write a PNG at a size the window never actually had. It stays pending and lands a
+        // frame or two later at the real size.
+        if (screenshotPending && !WindowSettling)
         {
             screenshotTarget?.Dispose();
             screenshotTarget = new RenderTarget(Width, Height);
@@ -833,7 +907,9 @@ public static partial class Engine
 
         // Screenshot (part 2): the offscreen pass is now committed, so read its color image back on
         // sokol's command queue (FIFO after the frame's work) and write the PNG.
-        if (screenshotPending)
+        // Keyed on the target, not on screenshotPending: part 1 declines to build one while the
+        // window is still settling, and the request stays pending until a later frame renders it.
+        if (screenshotTarget != null)
         {
             // Content was rendered upright, so no sampling pre-flip on readback (flipY:false). Any
             // backend-specific origin handling (e.g. GL's bottom-up readback) lives in the native layer.

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using Zinc.Core;
 
 namespace Zinc;
@@ -53,6 +53,25 @@ public class WaitForSeconds : CustomYieldInstruction
             {
                 ElapsedTime += (float)Engine.DeltaTime;
             }
+            yield return null;
+        }
+        yield return null;
+    }
+}
+
+// Waits out a pending window resize, so what follows can trust Engine.Width/Height.
+//
+// The engine already holds scene Create() and screenshots back on its own, so this is for code
+// that resizes the window mid-run and wants to sequence against it - repositioning things after
+// going fullscreen, say. It resolves on the first frame the size is real, and immediately if no
+// resize is pending, so it is safe to yield unconditionally. It cannot outlast Engine's settle
+// budget, so a resize that never arrives lets the coroutine continue rather than stranding it.
+public class WaitForWindowResize : CustomYieldInstruction
+{
+    public override IEnumerator Wait()
+    {
+        while (Engine.WindowSettling)
+        {
             yield return null;
         }
         yield return null;

@@ -1,4 +1,4 @@
-using Arch.Core;
+﻿using Arch.Core;
 using Arch.Core.Extensions;
 using Zinc.Core;
 
@@ -103,9 +103,31 @@ public partial class Scene : Entity
         {
             Engine.SetTargetScene(this);
         }
+
+        // Create() is DEFERRED to the top of the next frame whose window size can be trusted -
+        // it does not run before this method returns.
+        //
+        // Create() is where scenes read Engine.Width/Height to lay themselves out, and those
+        // are stale for the first frames after a resize (see Engine.WindowSettling). Worse, a
+        // scene started from the RunOptions setup callback runs before ANY frame has happened,
+        // so it would read whatever size the window was created at rather than the size it was
+        // then resized to. Deferring means a scene always lays out against a size that is
+        // actually true, whether or not anyone resized the window on the way up.
+        //
+        // Status stays Inactive until then, deliberately and as a pair with Create(): were the
+        // scene to go Active first, SceneUpdateSystem would call its Update() before its
+        // Create() had built anything for that Update() to touch.
+        Engine.DeferSceneStart(this);
+    }
+
+    // The half of Start() that waits for a trustworthy frame. Engine calls this from the top of
+    // one; nothing else should.
+    internal void RunDeferredStart()
+    {
         Create();
         Status = SceneActiveStatus.Active;
     }
+
     public virtual void Create(){}
     public virtual void Cleanup(){}
 }

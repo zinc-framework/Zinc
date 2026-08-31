@@ -270,8 +270,18 @@ public static class DesktopWindow
     /// meaning when the frame comes and goes - which is what <see cref="Engine.Fullscreen"/> needs
     /// on the way out of fullscreen.
     /// </summary>
-    public static bool SetClientSize(int width, int height) =>
-        Call(h => zinc_window_set_client_size((void*)h, width, height));
+    public static bool SetClientSize(int width, int height)
+    {
+        // Only arm a settle if this actually changes the size. Asking for the size the window
+        // already has produces no resize, so nothing would ever end the settle and everything
+        // waiting on one would sit through the whole frame budget for no reason.
+        bool sizeChanges = !GetClientSize(out var currentW, out var currentH)
+                           || currentW != width || currentH != height;
+
+        if (!Call(h => zinc_window_set_client_size((void*)h, width, height))) { return false; }
+        if (sizeChanges) { Engine.BeginWindowSettle(); }
+        return true;
+    }
 
     /// <summary>
     /// Usable desktop area of the monitor the window is on, excluding the taskbar/Dock and
