@@ -215,6 +215,64 @@ public static class DesktopWindow
     /// <summary>Move the window's top-left corner to a screen position, in physical pixels.</summary>
     public static bool SetPosition(int x, int y) => Call(h => zinc_window_set_position((void*)h, x, y));
 
+    [DllImport(LIB, EntryPoint = "zinc_window_get_bounds", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_get_bounds(void* handle, int* x, int* y, int* w, int* h);
+
+    [DllImport(LIB, EntryPoint = "zinc_window_get_client_size", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_get_client_size(void* handle, int* w, int* h);
+
+    [DllImport(LIB, EntryPoint = "zinc_window_set_client_size", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_set_client_size(void* handle, int w, int h);
+
+    /// <summary>
+    /// Where the window is and how big it is on the desktop: its outer rect, in physical pixels
+    /// with a top-left origin. The counterpart to <see cref="SetPosition"/>, and in the same space
+    /// as <see cref="GetWorkArea"/> - subtract one from the other to find out how much room is
+    /// left between the window and the edges of the screen.
+    /// </summary>
+    public static unsafe bool GetBounds(out int x, out int y, out int width, out int height)
+    {
+        x = y = width = height = 0;
+        void* h = NativeHandle;
+        if (h == null) return false;
+        int lx, ly, lw, lh, ok;
+        try { ok = zinc_window_get_bounds(h, &lx, &ly, &lw, &lh); }
+        catch (DllNotFoundException) { return false; }
+        catch (EntryPointNotFoundException) { return false; }
+        if (ok == 0) return false;
+        x = lx; y = ly; width = lw; height = lh;
+        return true;
+    }
+
+    /// <summary>
+    /// The drawable area, in physical pixels - so NOT <see cref="Engine.Width"/>, which is the
+    /// framebuffer size and only equals this when the display is at 100% scaling. The ratio
+    /// between the two is the window scale, which is how callers convert between the space the
+    /// engine renders in and the space the desktop is measured in.
+    /// </summary>
+    public static unsafe bool GetClientSize(out int width, out int height)
+    {
+        width = height = 0;
+        void* h = NativeHandle;
+        if (h == null) return false;
+        int lw, lh, ok;
+        try { ok = zinc_window_get_client_size(h, &lw, &lh); }
+        catch (DllNotFoundException) { return false; }
+        catch (EntryPointNotFoundException) { return false; }
+        if (ok == 0) return false;
+        width = lw; height = lh;
+        return true;
+    }
+
+    /// <summary>
+    /// Resize so the drawable area is exactly this many physical pixels, leaving the window where
+    /// it is. Sizing by the client area rather than the outer rect means the request keeps its
+    /// meaning when the frame comes and goes - which is what <see cref="Engine.Fullscreen"/> needs
+    /// on the way out of fullscreen.
+    /// </summary>
+    public static bool SetClientSize(int width, int height) =>
+        Call(h => zinc_window_set_client_size((void*)h, width, height));
+
     /// <summary>
     /// Usable desktop area of the monitor the window is on, excluding the taskbar/Dock and
     /// menu bar, in physical pixels with a top-left origin. Returns false (and zeroes) if

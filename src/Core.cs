@@ -47,6 +47,83 @@ public static partial class Engine
     }
 
     /// <summary>
+    /// The drawable size to return to when <see cref="Fullscreen"/> is switched off, in the same
+    /// units as <see cref="Width"/>/<see cref="Height"/>. Null (the default) means "whatever the
+    /// window was before it went fullscreen", which is captured on the way in.
+    ///
+    /// Set this when the app has a target windowed size in mind rather than wanting the previous
+    /// one back. Only the size is yours to choose - the window returns to where it was, since
+    /// sokol restores the position correctly and moving it elsewhere is the app's call to make
+    /// afterwards.
+    /// </summary>
+    public static (int width, int height)? WindowedSize { get; set; }
+
+    // Client size in physical pixels just before going fullscreen, plus the framebuffer size at
+    // the same moment. The ratio between them is the window scale, which is what converts a
+    // WindowedSize (framebuffer units) into the physical pixels SetClientSize wants.
+    static (int w, int h)? _preFullscreenClient;
+    static (int w, int h)? _preFullscreenFramebuffer;
+
+    /// <summary>
+    /// Whether the window covers a whole monitor. Borderless-windowed rather than an exclusive
+    /// display mode, so there is no resolution switch and nothing special about alt-tab.
+    ///
+    /// This is sokol's fullscreen, which takes the monitor the window is currently on (never more
+    /// than one) and uses that monitor's FULL rect, taskbar included - not its work area. A
+    /// companion that wants to sit above the taskbar rather than over it wants window bounds
+    /// instead.
+    ///
+    /// Everything about the window's shape survives, because sokol rewrites GWL_STYLE and never
+    /// GWL_EXSTYLE: transparency, topmost, taskbar visibility and click-through all keep working
+    /// while fullscreen. What does not survive on its own is the size of a BORDERLESS window.
+    /// sokol stores the outer rect on the way in and restores it with the decorated style on the
+    /// way out, so a window that had no frame to begin with comes back with its client area
+    /// shrunk by exactly the frame just re-added - 16x39 px on Windows 11, and cumulative across
+    /// toggles. That is an artefact of Zinc having restyled the window, not a sokol bug: a plain
+    /// decorated window round-trips exactly. The setter below re-states the shape and the client
+    /// size afterwards, which fixes the borderless case and is a no-op for the decorated one.
+    /// </summary>
+    public static bool Fullscreen
+    {
+        get => App.is_fullscreen() != 0;
+        set
+        {
+            if (value == Fullscreen) { return; }
+
+            if (value)
+            {
+                _preFullscreenClient = DesktopWindow.GetClientSize(out var cw, out var ch) ? (cw, ch) : null;
+                _preFullscreenFramebuffer = (Width, Height);
+                App.toggle_fullscreen();
+                return;
+            }
+
+            App.toggle_fullscreen();
+
+            // sokol just put a title bar back on. Re-apply in the same breath so one is never
+            // actually seen, and so Engine.Window keeps describing the real window.
+            ApplyWindowOptions(Window);
+
+            // Then restore the drawable size. WindowedSize is in framebuffer units, so scale it
+            // by the window scale measured before going fullscreen; with no target we already
+            // have the physical size and can put it back verbatim.
+            var target = _preFullscreenClient;
+            if (WindowedSize is (int tw, int th) &&
+                _preFullscreenClient is (int pw, int ph) &&
+                _preFullscreenFramebuffer is (int fw, int fh) && fw > 0 && fh > 0)
+            {
+                target = ((int)(tw * (pw / (float)fw)), (int)(th * (ph / (float)fh)));
+            }
+            else if (WindowedSize is (int rw, int rh) && _preFullscreenClient is null)
+            {
+                target = (rw, rh);
+            }
+
+            if (target is (int sw, int sh)) { DesktopWindow.SetClientSize(sw, sh); }
+        }
+    }
+
+    /// <summary>
     /// Submit a full-viewport ImGui dock space each frame, so ImGui windows can be docked
     /// anywhere over the app. Docking itself is always enabled, so this is purely about whether
     /// the full-viewport dock target exists.
@@ -259,6 +336,7 @@ public static partial class Engine
                 desc.width = opts.width;
                 desc.height = opts.height;
                 desc.icon.sokol_default = 1;
+                desc.fullscreen = (byte)(opts.fullscreen ? 1 : 0);
                 if (Window.Transparent)
                 {
                     // premultiplied-alpha compositing with whatever is behind the window

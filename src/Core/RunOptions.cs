@@ -10,5 +10,6 @@ public static partial class Engine
         Action setup = null,
         Action update = null,
         bool imguiDockSpace = false,
-        WindowOptions window = null);
+        WindowOptions window = null,
+        bool fullscreen = false);
 }
