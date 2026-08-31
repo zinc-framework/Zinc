@@ -118,7 +118,49 @@ public static class DesktopWindow
     internal static bool SetClickThrough(bool enable) =>
         Call(h => zinc_window_set_click_through((void*)h, enable ? 1 : 0));
 
+    [DllImport(LIB, EntryPoint = "zinc_window_get_cursor_pos", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_get_cursor_pos(void* handle, int* x, int* y, int* client_w, int* client_h);
+
+    /// <summary>
+    /// Where the mouse is right now, asked of the OS rather than of the window, in the same
+    /// coordinate space as <see cref="InputSystem.MouseX"/>/<see cref="InputSystem.MouseY"/>:
+    /// client-relative, top-left origin, framebuffer pixels. The result is outside
+    /// [0,Width)x[0,Height) whenever the mouse is outside the window, which is meaningful
+    /// rather than an error - that is how a caller knows the mouse left.
+    ///
+    /// This exists because window mouse *events* stop entirely under
+    /// <see cref="Engine.ClickThrough"/>, and are also only delivered when no other window is
+    /// over ours; a global query keeps working in both cases. The flip side is that it can't
+    /// tell an occluded cursor from one over our own content, so it is not a general
+    /// replacement for the event stream - see Engine.Frame for how the two are combined.
+    ///
+    /// Windows and macOS (the macOS half is unverified on hardware, like the rest of that
+    /// file); Linux reports false and leaves the outputs at zero.
+    /// </summary>
+    public static unsafe bool TryGetCursorPosition(out float x, out float y)
+    {
+        x = y = 0f;
+        void* h = NativeHandle;
+        if (h == null) return false;
+
+        int px, py, clientW, clientH;
+        int ok;
+        try { ok = zinc_window_get_cursor_pos(h, &px, &py, &clientW, &clientH); }
+        catch (DllNotFoundException) { return false; }
+        catch (EntryPointNotFoundException) { return false; }
+        if (ok == 0 || clientW <= 0 || clientH <= 0) return false;
+
+        // The native side answers in the window's own units - physical pixels on Windows,
+        // points on macOS - while sokol reports mouse events in framebuffer coordinates,
+        // which are the same thing only when high-dpi is on. Scaling by the client size lands
+        // us in the engine's space on either platform whatever the DPI setup is.
+        x = px * (App.width() / (float)clientW);
+        y = py * (App.height() / (float)clientH);
+        return true;
+    }
+
     static bool _dragRequested;
+    static bool _dragging;
 
     /// <summary>
     /// Hand the window to the OS's own move loop, so the user can drag the window by its
@@ -140,6 +182,9 @@ public static class DesktopWindow
     public static unsafe bool BeginDrag()
     {
         if (NativeHandle == null) return false;
+        // The move loop keeps pumping frames, so mouse callbacks keep firing while a drag is
+        // running - and a drag handler asking to drag again would start a nested move loop.
+        if (_dragging) return false;
         _dragRequested = true;
         return true;
     }
@@ -150,9 +195,14 @@ public static class DesktopWindow
     /// </summary>
     internal static void PumpDeferredDrag()
     {
-        if (!_dragRequested) return;
+        if (!_dragRequested || _dragging) return;
         _dragRequested = false;
-        Call(h => zinc_window_begin_drag((void*)h));
+        _dragging = true;
+        // zinc_window_begin_drag only returns once the OS move loop has ended. It also posts
+        // the button release that loop swallowed, so sokol reports a normal mouse-up and the
+        // engine's held-button state clears itself - see zinc_window.c for why that matters.
+        try { Call(h => zinc_window_begin_drag((void*)h)); }
+        finally { _dragging = false; }
     }
 
     /// <summary>

@@ -637,6 +637,26 @@ public static partial class Engine
             GP.reset_color();
         }
         
+        // Keep the cursor entity honest even when the window isn't being told where the mouse is.
+        // Two cases where the event stream lies by omission:
+        //  - ClickThrough is on, so the window gets no mouse input at all and MouseX/MouseY are
+        //    frozen wherever they last were. Without this poll a collider can never see the mouse
+        //    re-enter it, and the callback that would turn click-through back off never runs.
+        //  - The mouse left the window between two mouse-move messages (a fast flick), so the last
+        //    position we heard about is still over a collider that the mouse is no longer on.
+        // Inside the window with click-through off we keep trusting the events: they know about
+        // other windows sitting on top of ours, and a global cursor query doesn't.
+        if (DesktopWindow.TryGetCursorPosition(out var globalMouseX, out var globalMouseY))
+        {
+            bool overWindow = globalMouseX >= 0 && globalMouseY >= 0 &&
+                              globalMouseX < Width && globalMouseY < Height;
+            if (ClickThrough || !overWindow)
+            {
+                InputSystem.MouseX = globalMouseX;
+                InputSystem.MouseY = globalMouseY;
+            }
+        }
+
         Cursor.X = InputSystem.MouseX;
         Cursor.Y = InputSystem.MouseY;
 
