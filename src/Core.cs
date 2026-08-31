@@ -970,12 +970,21 @@ public static partial class Engine
         GP.translate(-pivotX, -pivotY);
         GP.rotate_at(world_rotation,pivotX,pivotY);
         GP.scale_at(world.scale.X, world.scale.Y,pivotX,pivotY);
+        // Flip by reading the source region backwards rather than by mirroring the quad. sokol_gp
+        // builds texture coords straight off the source rect - tl = src.x, tr = src.x + src.w,
+        // with no normalising - so a negative extent swaps the two edges and the artwork mirrors
+        // while the geometry, the pivot and the transform stack stay untouched. Mirroring the
+        // quad instead would put the sprite somewhere else whenever the pivot wasn't centred.
+        var src = r.Rect.InternalRect;
+        if (r.FlipX) { src.x += src.w; src.w = -src.w; }
+        if (r.FlipY) { src.y += src.h; src.h = -src.h; }
+
         GP.draw_textured_rect(0,
             //this is the rect to draw the source "to", basically can scale the rect (maybe do wrapping?)
             //we assume this is the width and height of the frame itself
             r.SizeRect.InternalRect,
             //this is the rect index into the texture itself
-            r.Rect.InternalRect);
+            src);
         GP.pop_transform();
         // GP.draw_filled_rect(x,y,img.internalData.width,img.internalData.height);
         GP.reset_image(0);

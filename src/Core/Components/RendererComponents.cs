@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using static Zinc.Resources;
 
 namespace Zinc;
@@ -27,6 +27,22 @@ public record struct SpriteRenderer : IComponent
     public float Height => SizeRect.height;
     /// <summary>How this sprite blends with what's behind it; sprites default to alpha Blend.</summary>
     public BlendMode BlendMode { get; set; }
+
+    /// <summary>
+    /// Mirror the sprite left-to-right / top-to-bottom as it is drawn.
+    ///
+    /// This is a texture-space flip, not a transform: the source region is read backwards while
+    /// the quad, the pivot and the scale are left exactly as they are. So it is independent of
+    /// all three - a flipped sprite occupies the same pixels as an unflipped one whatever the
+    /// pivot happens to be, which is not true of the negative-scale trick (that mirrors about
+    /// the pivot, so it only stays in place while the pivot is centred).
+    ///
+    /// Flipping is applied before rotation, the same ordering every 2D engine's sprite-flip uses:
+    /// the artwork mirrors within the quad, then the quad rotates.
+    /// </summary>
+    public bool FlipX { get; set; }
+    /// <inheritdoc cref="FlipX"/>
+    public bool FlipY { get; set; }
     public SpriteRenderer(Texture t, Rect r)
     {
         texture = t;
