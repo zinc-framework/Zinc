@@ -25,7 +25,7 @@ namespace Zinc;
 /// window, and Engine.ApplyWindowOptions is the only thing that should drive them, so that
 /// Engine.Window can't disagree with the real window. What stays public here are the
 /// </summary>
-public static class DesktopWindow
+public static unsafe class DesktopWindow
 {
     const string LIB = "zinc_platform";
 
