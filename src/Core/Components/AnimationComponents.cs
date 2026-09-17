@@ -20,6 +20,10 @@ public record struct SpriteAnimator() : IComponent
             field = value;
             animationIndex = 0;
             AnimationTime = 0f;
+            // Force FrameAnimationSystem to push frame 0 of the new clip on its next pass.
+            // Otherwise the renderer keeps showing the previous clip's last frame for a full
+            // FrameTime and the new clip starts on frame 1.
+            AnimationStarted = false;
         }
     }
     public Rect CurrentAnimationFrame => CurrentAnimation.Frames[animationIndex];
