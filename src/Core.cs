@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -418,6 +418,10 @@ public static partial class Engine
     {
         sapp_event ev = *e;
         AppDebugGUI.track_event(e);
+        // Tracked here rather than in InputSystem.Update so it is current before this frame's
+        // keyboard poll runs, and so ImGui claiming the event can't hide a focus change.
+        if (ev.type == sapp_event_type.SAPP_EVENTTYPE_FOCUSED) InputSystem.WindowFocused = true;
+        else if (ev.type == sapp_event_type.SAPP_EVENTTYPE_UNFOCUSED) InputSystem.WindowFocused = false;
          if (ImGUI.handle_event(e) > 0)
          {
              /*
@@ -795,11 +799,21 @@ public static partial class Engine
         //    position we heard about is still over a collider that the mouse is no longer on.
         // Inside the window with click-through off we keep trusting the events: they know about
         // other windows sitting on top of ours, and a global cursor query doesn't.
+        //
+        // Under click-through the poll is also the only source of InputSystem.Events.Mouse.Move,
+        // since the MOUSE_MOVE event that normally fires it can't reach the window. With
+        // click-through off the poll only writes the position: a sokol MOUSE_MOVE can still
+        // arrive for an outside-window position (the OS captures the mouse while a button is
+        // held), and firing from both paths would report the same move twice.
         if (DesktopWindow.TryGetCursorPosition(out var globalMouseX, out var globalMouseY))
         {
             bool overWindow = globalMouseX >= 0 && globalMouseY >= 0 &&
                               globalMouseX < Width && globalMouseY < Height;
-            if (ClickThrough || !overWindow)
+            if (ClickThrough)
+            {
+                InputSystem.ApplyPolledMousePosition(globalMouseX, globalMouseY);
+            }
+            else if (!overWindow)
             {
                 InputSystem.MouseX = globalMouseX;
                 InputSystem.MouseY = globalMouseY;
@@ -808,6 +822,13 @@ public static partial class Engine
 
         Cursor.X = InputSystem.MouseX;
         Cursor.Y = InputSystem.MouseY;
+
+        // Same idea for the keyboard. Key messages only reach the focused window, and a
+        // click-through window loses focus the first time the user clicks elsewhere, so once
+        // that happens the OS poll is the only way Key events can fire. While we ARE focused
+        // sokol still delivers keys normally, and the poll stays out of it so a press isn't
+        // reported twice.
+        InputSystem.PollGlobalKeyboard(ClickThrough && !InputSystem.WindowFocused);
 
         foreach (var s in ActiveSystems)
         {

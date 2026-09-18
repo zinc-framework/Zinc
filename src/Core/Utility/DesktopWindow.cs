@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Zinc.Internal.Sokol;
 
 namespace Zinc;
@@ -157,6 +157,34 @@ public static unsafe class DesktopWindow
         x = px * (App.width() / (float)clientW);
         y = py * (App.height() / (float)clientH);
         return true;
+    }
+
+    [DllImport(LIB, EntryPoint = "zinc_window_get_keys_down", CallingConvention = CallingConvention.Cdecl)]
+    static extern unsafe int zinc_window_get_keys_down(byte* out_down, int count);
+
+    /// <summary>
+    /// Which keys are physically down right now, asked of the OS rather than of the window.
+    /// Fills one byte per <see cref="Key"/> value (index = the key's numeric value, 1 = down),
+    /// which is the same numbering sokol uses, so the native side owns the per-platform
+    /// key tables and nothing up here cares which OS it is on.
+    ///
+    /// The keyboard counterpart to <see cref="TryGetCursorPosition"/>: key events only reach
+    /// the foreground window, and a click-through window loses that status the first time the
+    /// user clicks elsewhere, so this is how <see cref="InputSystem"/> keeps Key events alive
+    /// in that state. Windows via GetAsyncKeyState, macOS via CGEventSourceKeyState (unverified
+    /// on hardware, like the rest of that file); Linux reports false.
+    /// </summary>
+    public static unsafe bool TryGetKeysDown(Span<byte> down)
+    {
+        if (down.Length == 0) return false;
+        int ok;
+        try
+        {
+            fixed (byte* p = down) { ok = zinc_window_get_keys_down(p, down.Length); }
+        }
+        catch (DllNotFoundException) { return false; }
+        catch (EntryPointNotFoundException) { return false; }
+        return ok != 0;
     }
 
     static bool _dragRequested;

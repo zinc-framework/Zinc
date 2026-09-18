@@ -23,6 +23,31 @@ public partial class InputSystem : DSystem, IUpdateSystem
     }
     public static float MouseX;
     public static float MouseY;
+
+    /// <summary>
+    /// Whether the window currently has keyboard focus, tracked from sokol's FOCUSED and
+    /// UNFOCUSED events (WM_SETFOCUS/WM_KILLFOCUS on Windows, key-window changes on macOS) so
+    /// it means the same thing on every platform. Starts false: focus is only ever known once
+    /// the OS says so, and a click-through window may never be told at all.
+    /// </summary>
+    public static bool WindowFocused { get; internal set; }
+
+    /// <summary>
+    /// Apply a mouse position that came from polling the OS rather than from a window event,
+    /// and fire <see cref="Events.Mouse.Move"/> if it actually moved. Engine.Frame calls this
+    /// while <see cref="Engine.ClickThrough"/> is on: the window receives no mouse messages in
+    /// that state, so this is the only way Move subscribers ever hear anything. Modifiers are
+    /// not knowable from a cursor query, so the event carries an empty list.
+    /// </summary>
+    internal static void ApplyPolledMousePosition(float x, float y)
+    {
+        float dx = x - MouseX;
+        float dy = y - MouseY;
+        MouseX = x;
+        MouseY = y;
+        if (dx == 0f && dy == 0f) return;
+        Events.Mouse.Move?.Invoke(x, y, dx, dy, new List<Modifiers>());
+    }
     public static partial class Events
     {
         public static class Key
