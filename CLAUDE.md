@@ -143,6 +143,7 @@ A static `DllImportResolver` is registered for the framework assembly that maps 
 ## Conventions
 
 - **Coordinates**: Y-down, origin top-left. Default window is 1280×720 (from `Program.cs`).
+- **Child transforms**: a child's `X`/`Y` are in its parent's units — they take on the parent's world scale, same as the child's size, so scaling a parent scales the whole group (under an 8x sprite, `X = 16` lands 128px in). Scale is carried alongside the matrix rather than in it (`Anchor.GetWorldTransform` returns both), so a rotated child under a non-uniformly scaled parent stays a rectangle instead of shearing. `GetWorldTransform` is the one place the hierarchy is walked; `GetWorldPosition` / `SetWorldPosition` are defined through it.
 - **Entity update lambdas**: `new Shape(update: (self, dt) => { ... })`. The lambda's `self` is strongly typed.
 - **Property prefixes**: `Foo_Bar` always means "the `Bar` field of the `Foo` component attached to this entity" — generated, not hand-written. Search the codebase for the underlying field on the `record struct` if you need to know what it does.
 - **One frame per ECS event**: events created via `EventMeta` live for one full frame and are auto-destroyed. Don't hold references to event entities across frames.

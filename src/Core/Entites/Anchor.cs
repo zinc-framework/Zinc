@@ -146,23 +146,9 @@ public partial class Anchor : SceneObject
         base.OnDestroy();
     }
 
-    public Vector2 GetWorldPosition()
-    {
-        if (Parent == null || Parent is Scene.SceneRootAnchor)
-            return new Vector2(X, Y);
-
-        var parentWorld = Parent.GetWorldPosition();
-        var localPos = new Vector2(X, Y);
-        
-        // Transform local position by parent's rotation if needed
-        if (Parent.Rotation != 0)
-        {
-            var parentRotation = Matrix3x2.CreateRotation(Parent.Rotation);
-            localPos = Vector2.Transform(localPos, parentRotation);
-        }
-        
-        return parentWorld + localPos;
-    }
+    // Same answer as GetWorldTransform, which is the one place the hierarchy is walked: what gets
+    // drawn, what collides and what this reports can't drift apart.
+    public Vector2 GetWorldPosition() => GetWorldTransform().transform.Translation;
 
     public void SetWorldPosition(float worldX, float worldY)
     {
@@ -173,37 +159,37 @@ public partial class Anchor : SceneObject
             return;
         }
 
-        var parentWorld = Parent.GetWorldPosition();
-        var localOffset = new Vector2(worldX, worldY) - parentWorld;
-        
-        // Transform back to local space if parent is rotated
-        if (Parent.Rotation != 0)
-        {
-            var inverseRotation = Matrix3x2.CreateRotation(-Parent.Rotation);
-            localOffset = Vector2.Transform(localOffset, inverseRotation);
-        }
-        
-        X = localOffset.X;
-        Y = localOffset.Y;
+        // Undo GetWorldTransform: out of the parent's rotation + translation, then out of its scale.
+        // The parent matrix never carries scale, so it always inverts.
+        var (parentTransform, parentScale) = Parent.GetWorldTransform();
+        Matrix3x2.Invert(parentTransform, out var toParentSpace);
+        var localOffset = Vector2.Transform(new Vector2(worldX, worldY), toParentSpace);
+
+        // a parent squashed to zero on an axis puts every offset on that axis at the same spot
+        X = parentScale.X != 0 ? localOffset.X / parentScale.X : 0;
+        Y = parentScale.Y != 0 ? localOffset.Y / parentScale.Y : 0;
     }
 
     public (Matrix3x2 transform, Vector2 scale) GetWorldTransform()
     {
         var pos = ECSEntity.Get<Position>();
         var (localRotation, _, localScale) = pos.GetTransform();
-        
-        // Start with local transform
-        var localTransform = Matrix3x2.CreateRotation(pos.Rotation) * 
-                            Matrix3x2.CreateTranslation(pos.X, pos.Y);
 
         if (Parent != null && !(Parent is Scene.SceneRootAnchor))
         {
             var (parentTransform, parentScale) = Parent.GetWorldTransform();
-            
+
+            // A child's offset is measured in its parent's units, so it takes on the parent's
+            // world scale just like the child's size does: scale the parent and the whole group
+            // scales. Scale stays out of the matrix itself (carried alongside instead) so a
+            // rotated child under a non-uniform parent stays a rectangle rather than shearing.
+            var localTransform = Matrix3x2.CreateRotation(pos.Rotation) *
+                                Matrix3x2.CreateTranslation(pos.X * parentScale.X, pos.Y * parentScale.Y);
+
             // Combine with parent transform
             // Order is crucial: child transform * parent transform
             var worldTransform = localTransform * parentTransform;
-            
+
             Vector2 worldScale = new Vector2(
                 localScale.X * parentScale.X, 
                 localScale.Y * parentScale.Y
@@ -212,7 +198,7 @@ public partial class Anchor : SceneObject
             return (worldTransform, worldScale);
         }
 
-        return (localTransform, localScale);
+        return (Matrix3x2.CreateRotation(pos.Rotation) * Matrix3x2.CreateTranslation(pos.X, pos.Y), localScale);
     }
     
 }
