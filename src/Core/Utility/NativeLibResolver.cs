@@ -67,11 +67,10 @@ internal static class NativeLibResolver
         // Console.WriteLine(Environment.OSVersion.Platform);
         var platformDependentName = GetLibraryName(libraryName);
         // Console.WriteLine($"resolving {libraryName} to {platformDependentName}");
-        IntPtr handle;
-        var loaded = NativeLibrary.TryLoad(platformDependentName, assembly, searchPath, out handle);
+        var loaded = NativeLibrary.TryLoad(platformDependentName, assembly, searchPath, out IntPtr handle);
         if (!loaded)
         {
-            Console.WriteLine($"NativeLibResolver Failed loading {libraryName} - do you update the platform paths for where the DLL is?");
+            Console.WriteLine($"NativeLibResolver Failed loading {libraryName} - did you update the platform paths for where the DLL is?");
         }
         return handle;
     }

@@ -70,13 +70,13 @@ public class CollisionCallbackSystem : DSystem, IUpdateSystem
                 switch (me.mouseState)
                 {
                     case InputSystem.MouseState.Up:
-                        target.Get<Collider>().OnMouseUp?.Invoke(managedtarget,me.mods);
+                        target.Get<Collider>().OnMouseUp?.Invoke(managedtarget,me.button,me.mods);
                         break;
                     case InputSystem.MouseState.Pressed:
-                        target.Get<Collider>().OnMousePressed?.Invoke(managedtarget,me.mods);
+                        target.Get<Collider>().OnMousePressed?.Invoke(managedtarget,me.button,me.mods);
                         break;
                     case InputSystem.MouseState.Down:
-                        target.Get<Collider>().OnMouseDown?.Invoke(managedtarget,me.mods);
+                        target.Get<Collider>().OnMouseDown?.Invoke(managedtarget,me.button,me.mods);
                         break;
                     case InputSystem.MouseState.Scroll:
                         target.Get<Collider>().OnMouseScroll?.Invoke(managedtarget,me.mods,me.scrollX,me.scrollY);

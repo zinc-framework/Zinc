@@ -60,9 +60,9 @@ public partial class InputSystem : DSystem, IUpdateSystem
 
         public static class Mouse
         {
-            public static Action<List<Modifiers>> Down;
-            public static Action<List<Modifiers>> Pressed;
-            public static Action<List<Modifiers>> Up;
+            public static Action<MouseButton,List<Modifiers>> Down;
+            public static Action<MouseButton,List<Modifiers>> Pressed;
+            public static Action<MouseButton,List<Modifiers>> Up;
             public static Action<float,float,float,float,List<Modifiers>> Move;
             public static Action<float,float,List<Modifiers>> Scroll;
         }
@@ -140,7 +140,7 @@ public partial class InputSystem : DSystem, IUpdateSystem
 
                         if (createPressedEvent)
                         {
-                            Events.Mouse.Pressed?.Invoke(FrameModifiers);
+                            Events.Mouse.Pressed?.Invoke(downButton,FrameModifiers);
                             Engine.ECSWorld.Create(
                                 new EventMeta("MOUSE_PRESSED"),
                                 new MouseEvent(MouseState.Pressed,downButton,FrameModifiers));
@@ -168,7 +168,7 @@ public partial class InputSystem : DSystem, IUpdateSystem
                                 rmb_up = true;
                                 break;
                         }
-                        Events.Mouse.Up?.Invoke(FrameModifiers);
+                        Events.Mouse.Up?.Invoke(upButton,FrameModifiers);
                         Engine.ECSWorld.Create(
                             new EventMeta("MOUSE_UP"),
                             new MouseEvent(MouseState.Up,upButton,FrameModifiers));
@@ -231,21 +231,23 @@ public partial class InputSystem : DSystem, IUpdateSystem
 
         if(!lmb_up || !rmb_up || !mmb_up)
         {
-            Events.Mouse.Down?.Invoke(FrameModifiers);
             if(!lmb_up)
             {
+                Events.Mouse.Down?.Invoke(MouseButton.LEFT,FrameModifiers);
                 Engine.ECSWorld.Create(
                     new EventMeta("MOUSE_DOWN"),
                     new MouseEvent(MouseState.Down,MouseButton.LEFT,FrameModifiers));
             }
             if(!rmb_up)
             {
+                Events.Mouse.Down?.Invoke(MouseButton.RIGHT,FrameModifiers);
                 Engine.ECSWorld.Create(
                     new EventMeta("MOUSE_DOWN"),
                     new MouseEvent(MouseState.Down,MouseButton.RIGHT,FrameModifiers));
             }
             if(!mmb_up)
             {
+                Events.Mouse.Down?.Invoke(MouseButton.MIDDLE,FrameModifiers);
                 Engine.ECSWorld.Create(
                     new EventMeta("MOUSE_DOWN"),
                     new MouseEvent(MouseState.Down,MouseButton.MIDDLE,FrameModifiers));
