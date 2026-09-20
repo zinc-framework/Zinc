@@ -18,13 +18,24 @@
     <PackageReference Include="Zinc.Magic" Version="1.0.10" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <ZincNativeLibExcludes>libs\runtimes\**\*.lib</ZincNativeLibExcludes>
+    <ZincNativeLibExcludes Condition="'$(Configuration)' == 'Release'">$(ZincNativeLibExcludes);libs\runtimes\**\*.pdb</ZincNativeLibExcludes>
+  </PropertyGroup>
+
   <ItemGroup>
       <Content Include="data\**\*">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
-      <Content Include="libs\runtimes\**\*">
+      <!-- .lib import libs only matter when linking native code against the dlls, never at runtime.
+           Native .pdb symbols are only for debugging into the natives, so Release leaves them behind. -->
+      <Content Include="libs\runtimes\**\*" Exclude="$(ZincNativeLibExcludes)">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
           <PackagePath>runtimes</PackagePath>
+          <!-- Single-file publish: the SDK takes any .dll for a managed assembly and queues it for
+               the bundle, the bundler then rejects it as native, and it ends up neither bundled nor
+               copied. NativeLibResolver loads these from disk anyway, so keep them out of the bundle. -->
+          <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </Content>
   </ItemGroup>
 

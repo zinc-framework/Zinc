@@ -1,0 +1,35 @@
+<Project>
+  <!--
+    Zinc publish integration.
+
+    Zinc.csproj copies every libs/runtimes/<rid>/native/ folder to the output, because a plain
+    `dotnet run` has no RuntimeIdentifier and NativeLibResolver picks the platform at runtime.
+    A RID-specific publish only ever loads one of those folders, so this trims the published
+    libs/runtimes/ down to the RID being published. (Which file types get copied at all, e.g.
+    native .pdb symbols in Debug only, is decided by the Content glob in Zinc.csproj.)
+
+    Import this from the game's csproj. It can't live in Zinc.csproj itself: the RID isn't
+    flowed across the ProjectReference, so $(RuntimeIdentifier) is empty in there.
+
+    Set ZincPublishAllNativeLibs=true to skip the trimming.
+  -->
+
+  <Target Name="ZincFilterNativeLibsForPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(RuntimeIdentifier)' != '' and '$(ZincPublishAllNativeLibs)' != 'true'">
+
+    <ItemGroup>
+      <_ZincNativeLib Include="@(ResolvedFileToPublish)"
+                      Condition="$([System.String]::new('%(ResolvedFileToPublish.RelativePath)').Replace('\', '/').StartsWith('libs/runtimes/'))" />
+      <_ZincNativeLibToPublish Include="@(_ZincNativeLib)"
+                               Condition="$([System.String]::new('%(_ZincNativeLib.RelativePath)').Replace('\', '/').StartsWith('libs/runtimes/$(RuntimeIdentifier)/'))" />
+
+      <ResolvedFileToPublish Remove="@(_ZincNativeLib)" />
+      <ResolvedFileToPublish Include="@(_ZincNativeLibToPublish)" />
+    </ItemGroup>
+
+    <Warning Condition="'@(_ZincNativeLib)' != '' and '@(_ZincNativeLibToPublish)' == ''"
+             Text="Zinc has no native libs for RuntimeIdentifier '$(RuntimeIdentifier)' (looked in libs/runtimes/$(RuntimeIdentifier)/). The published app will fail to load sokol/box2d/stb." />
+  </Target>
+
+</Project>
