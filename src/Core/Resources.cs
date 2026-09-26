@@ -18,7 +18,10 @@ public static class Resources
             get => path;
             init
             {
-                path = System.IO.Path.GetFullPath(value);
+                // Relative paths (what Zinc.Magic emits for res/ assets) are relative to the app's
+                // directory, where the build copies res/, not to the working directory: a published
+                // game can be launched from anywhere. Absolute paths pass through unchanged.
+                path = System.IO.Path.GetFullPath(value, AppContext.BaseDirectory);
             }
         }
         public int Width { get; private set; } = -1;
