@@ -1,10 +1,3 @@
-using System.Numerics;
-using Arch.Core.Extensions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Zinc.Core;
-using Zinc.Internal.Sokol;
-using Zinc.Internal.STB;
-
 namespace Zinc;
 
 
