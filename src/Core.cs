@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -1382,6 +1382,51 @@ public static partial class Engine
             }
 
             return true;
+        }
+    }
+
+    public static bool SetAppIcon(Resources.Texture tex)
+    {
+        if (string.IsNullOrEmpty(tex.Path) || !File.Exists(tex.Path))
+        {
+            Console.WriteLine("SetAppIcon: texture has no source file to read pixels from");
+            return false;
+        }
+        var bytes = File.ReadAllBytes(tex.Path);
+        unsafe
+        {
+            fixed (byte* imgptr = bytes)
+            {
+                int imgx, imgy, channels;
+                var pixels = STB.stbi_load_from_memory(imgptr, bytes.Length, &imgx, &imgy, &channels, 4);
+                if (pixels == null)
+                {
+                    return false;
+                }
+
+                sapp_icon_desc icon_desc = default;
+                icon_desc.images[0].width = imgx;
+                icon_desc.images[0].height = imgy;
+                icon_desc.images[0].pixels.ptr = pixels;
+                icon_desc.images[0].pixels.size = (nuint)(imgx * imgy * 4);
+                // sokol copies the pixels into the native icon, so they can be freed right after
+                App.set_icon(&icon_desc);
+                STB.stbi_image_free(pixels);
+            }
+        }
+        return true;
+    }
+
+    public static void SetWindowTitle(string title)
+    {
+        // sokol wants a null-terminated C string, and copies it, so the buffer only has to outlive the call
+        var bytes = System.Text.Encoding.UTF8.GetBytes(title + "\0");
+        unsafe
+        {
+            fixed (byte* ptr = bytes)
+            {
+                App.set_window_title((sbyte*)ptr);
+            }
         }
     }
 }
