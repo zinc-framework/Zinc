@@ -12,7 +12,21 @@
     flowed across the ProjectReference, so $(RuntimeIdentifier) is empty in there.
 
     Set ZincPublishAllNativeLibs=true to skip the trimming.
+
+    It also writes zinc.publish.json into the publish folder: the contract with the zinc CLI
+    (`zinc package`), which reads it instead of guessing at the layout. It records what was built
+    (RID, configuration, version), which files are native code as opposed to content, and the
+    packaging settings a game can set in its csproj:
+
+      <ZincAppName>   Display and bundle name. Defaults to AssemblyName.
+      <ZincBundleId>  Reverse-DNS identifier, e.g. com.studio.game. Required to sign on macOS.
+      <ZincAppIcon>   Icon source, relative to the publish folder, e.g. res/icon.png.
   -->
+
+  <PropertyGroup>
+    <!-- Lets tooling check the import is present: dotnet msbuild -getProperty:ZincPublishTargets -->
+    <ZincPublishTargets>true</ZincPublishTargets>
+  </PropertyGroup>
 
   <Target Name="ZincFilterNativeLibsForPublish"
           AfterTargets="ComputeResolvedFilesToPublishList"
@@ -30,6 +44,40 @@
 
     <Warning Condition="'@(_ZincNativeLib)' != '' and '@(_ZincNativeLibToPublish)' == ''"
              Text="Zinc has no native libs for RuntimeIdentifier '$(RuntimeIdentifier)' (looked in libs/runtimes/$(RuntimeIdentifier)/). The published app will fail to load sokol/box2d/stb." />
+  </Target>
+
+  <Target Name="ZincWritePublishManifest"
+          AfterTargets="Publish"
+          Condition="'$(RuntimeIdentifier)' != ''">
+
+    <PropertyGroup>
+      <_ZincAppName>$(ZincAppName)</_ZincAppName>
+      <_ZincAppName Condition="'$(_ZincAppName)' == ''">$(AssemblyName)</_ZincAppName>
+      <_ZincExecutable>$(AssemblyName)</_ZincExecutable>
+      <_ZincExecutable Condition="$(RuntimeIdentifier.StartsWith('win'))">$(AssemblyName).exe</_ZincExecutable>
+      <_ZincSelfContained>false</_ZincSelfContained>
+      <_ZincSelfContained Condition="'$(SelfContained)' == 'true'">true</_ZincSelfContained>
+      <_ZincSingleFile>false</_ZincSingleFile>
+      <_ZincSingleFile Condition="'$(PublishSingleFile)' == 'true'">true</_ZincSingleFile>
+      <_ZincAppIcon>$(ZincAppIcon.Replace('\', '/'))</_ZincAppIcon>
+      <!-- "native" lists the publish-relative folders holding native code; everything else besides
+           the executable is content. Values go in unescaped, so keep them free of quotes and backslashes. -->
+      <_ZincPublishManifest>{
+  "schema": 1,
+  "runtimeIdentifier": "$(RuntimeIdentifier)",
+  "configuration": "$(Configuration)",
+  "selfContained": $(_ZincSelfContained),
+  "singleFile": $(_ZincSingleFile),
+  "version": "$(Version)",
+  "executable": "$(_ZincExecutable)",
+  "native": [ "libs" ],
+  "appName": "$(_ZincAppName)",
+  "bundleId": "$(ZincBundleId)",
+  "icon": "$(_ZincAppIcon)"
+}</_ZincPublishManifest>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(PublishDir)zinc.publish.json" Lines="$(_ZincPublishManifest)" Overwrite="true" />
   </Target>
 
 </Project>

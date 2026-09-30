@@ -215,33 +215,38 @@ public static partial class Engine
     // exactly the scene with no ImGui/debug overlay on top. Works for both entity-based scenes and
     // immediate-mode (Scene.Update) demos.
 
-    /// <summary>Default location screenshots are written to. Change it directly or via SetScreenshotPath.</summary>
-    public static string ScreenshotPath = Path.Combine(AppContext.BaseDirectory, "screenshots", "zinc.png");
+    /// <summary>
+    /// Where Screenshot() writes when it isn't given a path. Defaults to a folder named after the game
+    /// in the user's Pictures folder: writable on every platform, and outside the app, where a new file
+    /// would break a signed macOS bundle (and Program Files isn't writable on Windows). Set it to put
+    /// screenshots anywhere else, e.g. a folder in the project while developing.
+    /// </summary>
+    public static string ScreenshotDirectory { get; set; } = DefaultScreenshotDirectory();
+
+    static string DefaultScreenshotDirectory()
+    {
+        var pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        // No Pictures folder when there's no home directory (some CI and container setups).
+        if (string.IsNullOrEmpty(pictures)) pictures = Path.GetTempPath();
+        return Path.Combine(pictures, Assembly.GetEntryAssembly()?.GetName().Name ?? "Zinc");
+    }
 
     /// <summary>
     /// Ask sokol_app to close the window and shut down cleanly at the end of the frame.
     /// This is the only way out for a borderless window, which has no OS close button.
     /// </summary>
     public static void Quit() => Internal.Sokol.App.request_quit();
-    /// <summary>Set the default screenshot output path (used by Screenshot() when no path is passed).</summary>
-    public static void SetScreenshotPath(string path) => ScreenshotPath = path;
-
     private static bool screenshotPending;
     private static string screenshotResolvedPath;
     private static RenderTarget screenshotTarget;
 
     /// <summary>
-    /// Request a screenshot. If <paramref name="path"/> is null, a timestamped file is written next to
-    /// ScreenshotPath. The capture happens at the end of the current frame.
+    /// Request a screenshot. If <paramref name="path"/> is null, a timestamped file is written to
+    /// ScreenshotDirectory. The capture happens at the end of the current frame.
     /// </summary>
     public static void Screenshot(string path = null)
     {
-        if (path == null)
-        {
-            var dir = Path.GetDirectoryName(ScreenshotPath);
-            var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            path = string.IsNullOrEmpty(dir) ? $"zinc_{stamp}.png" : Path.Combine(dir, $"zinc_{stamp}.png");
-        }
+        path ??= Path.Combine(ScreenshotDirectory, $"zinc_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
         screenshotResolvedPath = path;
         screenshotPending = true;
     }

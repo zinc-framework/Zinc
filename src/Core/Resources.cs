@@ -8,6 +8,24 @@ public record SpriteData(Resources.Texture Texture, Rect Rect);
 public record AnimatedSpriteData(Resources.Texture Texture, HashSet<Animation> Animations) : SpriteData(Texture, Rect.Empty);
 public static class Resources
 {
+    /// <summary>
+    /// Where the build puts res/ and data/: the app's directory, except inside a macOS .app bundle,
+    /// where the executable sits in Contents/MacOS and assets go in Contents/Resources (codesign
+    /// refuses to sign a bundle with non-code files next to the executable).
+    /// </summary>
+    public static readonly string ContentDirectory = FindContentDirectory();
+
+    static string FindContentDirectory()
+    {
+        var appDir = new DirectoryInfo(AppContext.BaseDirectory);
+        if (OperatingSystem.IsMacOS() && appDir.Name == "MacOS" && appDir.Parent is { Name: "Contents" } contents)
+        {
+            var resources = System.IO.Path.Combine(contents.FullName, "Resources");
+            if (Directory.Exists(resources)) return resources;
+        }
+        return AppContext.BaseDirectory;
+    }
+
     // Resources are types that are loadable
     public record Texture
     {
@@ -18,10 +36,10 @@ public static class Resources
             get => path;
             init
             {
-                // Relative paths (what Zinc.Magic emits for res/ assets) are relative to the app's
+                // Relative paths (what Zinc.Magic emits for res/ assets) are relative to the content
                 // directory, where the build copies res/, not to the working directory: a published
                 // game can be launched from anywhere. Absolute paths pass through unchanged.
-                path = System.IO.Path.GetFullPath(value, AppContext.BaseDirectory);
+                path = System.IO.Path.GetFullPath(value, ContentDirectory);
             }
         }
         public int Width { get; private set; } = -1;
