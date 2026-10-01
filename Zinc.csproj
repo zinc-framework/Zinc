@@ -12,9 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="Arch" Version="1.2.7" />
-    <PackageReference Include="Arch.AOT.SourceGenerator" Version="1.0.1" />
-    <PackageReference Include="Depot.SourceGenerator" Version="1.0.9" />
-    <PackageReference Include="Zinc.ECSGenerator" Version="1.3.2" />
+    <!-- A source generator that's packaged as a runtime library too, with Roslyn as a dependency
+         (still the case upstream). ExcludeAssets="runtime" keeps its DLL and Roslyn's out of the
+         game's output; the generator still runs. -->
+    <PackageReference Include="Arch.AOT.SourceGenerator" Version="1.0.1" ExcludeAssets="runtime" />
+    <PackageReference Include="Depot.SourceGenerator" Version="1.1.1" />
+    <PackageReference Include="Zinc.ECSGenerator" Version="1.3.3" />
     <PackageReference Include="Zinc.Magic" Version="1.0.11" />
   </ItemGroup>
 
