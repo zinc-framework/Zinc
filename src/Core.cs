@@ -21,8 +21,9 @@ public static partial class Engine
         return curr;
     }
     
-    public static Action Update;
+    public static Action<double> Update;
     public static Action Setup;
+    public static Action Shutdown;
     public static InputSystem InputSystem = new InputSystem();
     static DestructionSystem DestructionSystem = new DestructionSystem();
     static EntityUpdateSystem EntityUpdate = new ();
@@ -362,7 +363,7 @@ public static partial class Engine
         hasScenesStagedForUnmounting = true;
     }
 
-    private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null);
+    private static RunOptions defaultOpts = new(500, 500, "dinghy",null,null, null);
     public static void Run(RunOptions opts = null)
     {
         if (opts != null)
@@ -374,6 +375,10 @@ public static partial class Engine
             if (opts.setup != null)
             {
                 Setup += opts.setup;
+            }
+            if (opts.shutdown != null)
+            {
+                Shutdown += opts.shutdown;
             }
         }
         Boot(opts == null ? defaultOpts : opts);
@@ -670,9 +675,6 @@ public static partial class Engine
         DeltaTime = App.frame_duration();
         Time += DeltaTime;
         
-        // float t = (float)App.frame_duration() * 60.0f;
-        float t = (float)DeltaTime * 1000.0f;
-        // Console.WriteLine($"{t}ms");
         Width = App.width();
         Height = App.height();
 
@@ -760,7 +762,7 @@ public static partial class Engine
             {
                 ec += l.Count;
             }
-            Core.ImGUI.ShowStats($"{t}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
+            Core.ImGUI.ShowStats($"{(float)DeltaTime * 1000.0f}ms",$"Entities: {ec}",$"{InputSystem.MouseX},{InputSystem.MouseY}");
         }
 
         fixed (bool* dem_ptr = &showIMGUIDemo)
@@ -849,7 +851,7 @@ public static partial class Engine
         // accumulator — the filter lags real spikes, and the 0.25s clamp in
         // PhysicsWorld.Update is meant to act on the *raw* wall-clock dt).
         PhysicsWorld.Update(App.frame_duration_unfiltered());
-        Update?.Invoke();
+        Update?.Invoke(DeltaTime);
         EntityUpdate.Update(DeltaTime);
         foreach (var s in ActiveSystems)
         {
@@ -1331,6 +1333,7 @@ public static partial class Engine
         GP.shutdown();
         GL.shutdown();
         Gfx.shutdown();
+        Shutdown?.Invoke();
     }
     
     // static unsafe sg_shader makeShaderFromSource()

@@ -8,7 +8,8 @@ public static partial class Engine
         int height,
         string appName,
         Action setup = null,
-        Action update = null,
+        Action<double> update = null,
+        Action shutdown = null,
         bool imguiDockSpace = false,
         WindowOptions window = null,
         bool fullscreen = false);
