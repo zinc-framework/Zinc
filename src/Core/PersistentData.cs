@@ -10,13 +10,15 @@ public static partial class Engine
     /// per user, writable, and outside the install, so updates leave it alone and a signed macOS
     /// bundle stays intact. It's {user data}/{Company}/{Product}, from the game's csproj
     /// (which the SDK defaults to the AssemblyName), and is created the first time it's asked for:
-    /// %LOCALAPPDATA% on Windows, ~/Library/Application Support on macOS, ~/.local/share on Linux.
+    /// AppData\LocalLow on Windows, ~/Library/Application Support on macOS, ~/.local/share on Linux.
     /// </summary>
     public static string PersistentDataPath => persistentDataPath.Value;
 
     static readonly Lazy<string> persistentDataPath = new(() =>
     {
-        var userData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var userData = OperatingSystem.IsWindows()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "LocalLow")
+            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         // No user data folder when there's no home directory (some CI and container setups).
         if (string.IsNullOrEmpty(userData)) userData = Path.GetTempPath();
 
