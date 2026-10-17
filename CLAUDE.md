@@ -144,7 +144,7 @@ A static `DllImportResolver` is registered for the framework assembly that maps 
 
 Games import `Zinc.Publish.targets`. On a RID-specific publish it trims `libs/runtimes/` to that RID and writes `zinc.publish.json` into the publish folder: the contract with the [zinc CLI](https://github.com/zinc-framework/Zinc.Cli) (`zinc package`), recording what was built, which folders are native code, and the game's `ZincAppName` / `ZincBundleId` / `ZincAppIcon`. Change the layout there, not in the CLI.
 
-Content (`res/`, `data/`) is found through `Resources.ContentDirectory`: the app's directory, or `Contents/Resources` when running from a macOS `.app` (codesign rejects non-code files in `Contents/MacOS`). Resolve new asset paths against it, not `AppContext.BaseDirectory`.
+Content (`res/`, `data/`) is found through `Resources.ContentDirectory`: the app's directory, or `Contents/Resources` when running from a macOS `.app` (codesign rejects non-code files in `Contents/MacOS`). Resolve new asset paths against it, not `AppContext.BaseDirectory`. It's read-only in practice (inside the signed bundle on macOS), so what a game writes or players add (saves, settings, mods) goes in `Engine.PersistentDataPath` instead: per user, `<user data>/<Company>/<Product>` from the game's csproj (`src/Core/PersistentData.cs`).
 
 ## Conventions
 

@@ -12,7 +12,7 @@ namespace Zinc;
 ///
 /// These DllImports MUST live in the Zinc assembly: Zinc registers its DllImportResolver on
 /// THIS assembly (see NativeLibResolver), which is what rewrites the bare "zinc_platform" name
-/// to libs/runtimes/&lt;rid&gt;/native/zinc_platform.{dll,dylib,so}. A [DllImport("zinc_platform")]
+/// to libs/runtimes/{rid}/native/zinc_platform.{dll,dylib,so}. A [DllImport("zinc_platform")]
 /// from a different assembly would bypass that resolver and fail to load, so any consumer that
 /// needs raw virtual memory calls through this class instead of importing the symbols itself.
 /// </summary>
