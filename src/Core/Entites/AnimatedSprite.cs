@@ -35,6 +35,9 @@ public partial class AnimatedSprite : Sprite
         if (anim != null)
         {
             CurrentAnimation = anim;
+            // shown from this frame's draw, since its time starts now (FrameAnimationSystem counts from here),
+            // rather than from the next frame's animation pass
+            Renderer_Rect = CurrentAnimationFrame;
         }
         else
         {
