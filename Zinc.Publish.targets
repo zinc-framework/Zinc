@@ -21,6 +21,12 @@
       <ZincAppName>   Display and bundle name. Defaults to AssemblyName.
       <ZincBundleId>  Reverse-DNS identifier, e.g. com.studio.game. Required to sign on macOS.
       <ZincAppIcon>   Icon source, relative to the publish folder, e.g. res/icon.png.
+
+    and, as items, the hardened-runtime entitlements a signed macOS app needs beyond allow-jit
+    (which .NET needs, so zinc always adds it). Each is set true. For example, loading a library
+    another developer signed, such as Steam's steamclient.dylib:
+
+      <ZincEntitlement Include="com.apple.security.cs.disable-library-validation" />
   -->
 
   <PropertyGroup>
@@ -60,10 +66,11 @@
       <_ZincSingleFile>false</_ZincSingleFile>
       <_ZincSingleFile Condition="'$(PublishSingleFile)' == 'true'">true</_ZincSingleFile>
       <_ZincAppIcon>$(ZincAppIcon.Replace('\', '/'))</_ZincAppIcon>
+      <_ZincEntitlements>@(ZincEntitlement->'"%(Identity)"', ', ')</_ZincEntitlements>
       <!-- "native" lists the publish-relative folders holding native code; everything else besides
            the executable is content. Values go in unescaped, so keep them free of quotes and backslashes. -->
       <_ZincPublishManifest>{
-  "schema": 1,
+  "schema": 2,
   "runtimeIdentifier": "$(RuntimeIdentifier)",
   "configuration": "$(Configuration)",
   "selfContained": $(_ZincSelfContained),
@@ -73,7 +80,8 @@
   "native": [ "libs" ],
   "appName": "$(_ZincAppName)",
   "bundleId": "$(ZincBundleId)",
-  "icon": "$(_ZincAppIcon)"
+  "icon": "$(_ZincAppIcon)",
+  "entitlements": [ $(_ZincEntitlements) ]
 }</_ZincPublishManifest>
     </PropertyGroup>
 
