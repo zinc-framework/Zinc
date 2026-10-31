@@ -39,9 +39,8 @@
   <ItemGroup>
       <_ZincNativeLib Include="$(_ZincNativeLibDir)**\*" Exclude="$(ZincNativeLibExcludes)"
                       Link="libs\runtimes\%(RecursiveDir)%(Filename)%(Extension)" />
-      <!-- A platform with no Release build yet gets its Debug one. Mac libs only build on a Mac, so
-           this covers osx-arm64 until one runs the Bootstrapper. Zinc.Publish.targets warns when a
-           publish ships these. -->
+      <!-- A platform with no Release build yet gets its Debug one: browser-wasm, as of Oct 2026.
+           Zinc.Publish.targets warns when a publish ships these. -->
       <_ZincNativeLib Condition="'$(ZincNativeLibFlavor)' != 'Debug' and !Exists('libs\runtimes\win-x64')"
                       Include="libs\runtimes-debug\win-x64\**\*" Exclude="$(ZincNativeLibExcludes)"
                       Link="libs\runtimes\win-x64\%(RecursiveDir)%(Filename)%(Extension)" />
