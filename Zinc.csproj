@@ -22,9 +22,39 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <ZincNativeLibExcludes>libs\runtimes\**\*.lib</ZincNativeLibExcludes>
-    <ZincNativeLibExcludes Condition="'$(Configuration)' == 'Release'">$(ZincNativeLibExcludes);libs\runtimes\**\*.pdb</ZincNativeLibExcludes>
+    <!-- Which build of the native libs a game gets. Debug (libs\runtimes-debug\) has sokol's
+         validation and asserts, UBSan, and the D3D11 debug layer where Windows' Graphics Tools
+         are installed. Release (libs\runtimes\) is optimized: what ships. It follows the
+         configuration; -p:ZincNativeLibFlavor=Release overrides that, e.g. to chase a bug only the
+         shipped libs show. Either way they land in the output's libs\runtimes\, where
+         NativeLibResolver looks. -->
+    <ZincNativeLibFlavor Condition="'$(ZincNativeLibFlavor)' == '' and '$(Configuration)' == 'Debug'">Debug</ZincNativeLibFlavor>
+    <ZincNativeLibFlavor Condition="'$(ZincNativeLibFlavor)' == ''">Release</ZincNativeLibFlavor>
+    <_ZincNativeLibDir>libs\runtimes\</_ZincNativeLibDir>
+    <_ZincNativeLibDir Condition="'$(ZincNativeLibFlavor)' == 'Debug'">libs\runtimes-debug\</_ZincNativeLibDir>
+    <ZincNativeLibExcludes>libs\runtimes*\**\*.lib</ZincNativeLibExcludes>
+    <ZincNativeLibExcludes Condition="'$(Configuration)' == 'Release'">$(ZincNativeLibExcludes);libs\runtimes*\**\*.pdb</ZincNativeLibExcludes>
   </PropertyGroup>
+
+  <ItemGroup>
+      <_ZincNativeLib Include="$(_ZincNativeLibDir)**\*" Exclude="$(ZincNativeLibExcludes)"
+                      Link="libs\runtimes\%(RecursiveDir)%(Filename)%(Extension)" />
+      <!-- A platform with no Release build yet gets its Debug one. Mac libs only build on a Mac, so
+           this covers osx-arm64 until one runs the Bootstrapper. Zinc.Publish.targets warns when a
+           publish ships these. -->
+      <_ZincNativeLib Condition="'$(ZincNativeLibFlavor)' != 'Debug' and !Exists('libs\runtimes\win-x64')"
+                      Include="libs\runtimes-debug\win-x64\**\*" Exclude="$(ZincNativeLibExcludes)"
+                      Link="libs\runtimes\win-x64\%(RecursiveDir)%(Filename)%(Extension)" />
+      <_ZincNativeLib Condition="'$(ZincNativeLibFlavor)' != 'Debug' and !Exists('libs\runtimes\osx-arm64')"
+                      Include="libs\runtimes-debug\osx-arm64\**\*" Exclude="$(ZincNativeLibExcludes)"
+                      Link="libs\runtimes\osx-arm64\%(RecursiveDir)%(Filename)%(Extension)" />
+      <_ZincNativeLib Condition="'$(ZincNativeLibFlavor)' != 'Debug' and !Exists('libs\runtimes\linux-x64')"
+                      Include="libs\runtimes-debug\linux-x64\**\*" Exclude="$(ZincNativeLibExcludes)"
+                      Link="libs\runtimes\linux-x64\%(RecursiveDir)%(Filename)%(Extension)" />
+      <_ZincNativeLib Condition="'$(ZincNativeLibFlavor)' != 'Debug' and !Exists('libs\runtimes\browser-wasm')"
+                      Include="libs\runtimes-debug\browser-wasm\**\*" Exclude="$(ZincNativeLibExcludes)"
+                      Link="libs\runtimes\browser-wasm\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 
   <ItemGroup>
       <Content Include="data\**\*">
@@ -32,7 +62,7 @@
       </Content>
       <!-- .lib import libs only matter when linking native code against the dlls, never at runtime.
            Native .pdb symbols are only for debugging into the natives, so Release leaves them behind. -->
-      <Content Include="libs\runtimes\**\*" Exclude="$(ZincNativeLibExcludes)">
+      <Content Include="@(_ZincNativeLib)">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
           <PackagePath>runtimes</PackagePath>
           <!-- Single-file publish: the SDK takes any .dll for a managed assembly and queues it for

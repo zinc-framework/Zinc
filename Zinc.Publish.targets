@@ -4,6 +4,8 @@
 
     Zinc.csproj copies every libs/runtimes/<rid>/native/ folder to the output, because a plain
     `dotnet run` has no RuntimeIdentifier and NativeLibResolver picks the platform at runtime.
+    (It copies them from the Debug or Release build of the libs, by configuration: see
+    ZincNativeLibFlavor there.)
     A RID-specific publish only ever loads one of those folders, so this trims the published
     libs/runtimes/ down to the RID being published. (Which file types get copied at all, e.g.
     native .pdb symbols in Debug only, is decided by the Content glob in Zinc.csproj.)
@@ -50,6 +52,19 @@
 
     <Warning Condition="'@(_ZincNativeLib)' != '' and '@(_ZincNativeLibToPublish)' == ''"
              Text="Zinc has no native libs for RuntimeIdentifier '$(RuntimeIdentifier)' (looked in libs/runtimes/$(RuntimeIdentifier)/). The published app will fail to load sokol/box2d/stb." />
+  </Target>
+
+  <!-- Zinc.csproj falls back to a platform's Debug libs when it has no Release build yet; say so
+       when that's what a publish is about to ship. The flavor is worked out the same way as there. -->
+  <Target Name="ZincWarnDebugNativeLibsInPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(RuntimeIdentifier)' != ''">
+    <PropertyGroup>
+      <_ZincPublishLibFlavor>$(ZincNativeLibFlavor)</_ZincPublishLibFlavor>
+      <_ZincPublishLibFlavor Condition="'$(_ZincPublishLibFlavor)' == '' and '$(Configuration)' == 'Debug'">Debug</_ZincPublishLibFlavor>
+    </PropertyGroup>
+    <Warning Condition="'$(_ZincPublishLibFlavor)' != 'Debug' and !Exists('$(MSBuildThisFileDirectory)libs\runtimes\$(RuntimeIdentifier)') and Exists('$(MSBuildThisFileDirectory)libs\runtimes-debug\$(RuntimeIdentifier)')"
+             Text="Zinc has no Release build of the native libs for '$(RuntimeIdentifier)' yet, so this publish ships the Debug ones. Build both flavors on that platform with Zinc.Bootstrapper (build.ps1 sokol:build stb:build box2d:build zinc_platform:build) and update Zinc.Libs." />
   </Target>
 
   <Target Name="ZincWritePublishManifest"

@@ -140,6 +140,8 @@ generation (Zinc.Magic), the `Zinc.Shaders.targets` build step, `Resources.Shade
 
 A static `DllImportResolver` is registered for the framework assembly that maps logical lib names (`sokol`, `box2d`, `stb`) to platform-specific paths under `libs/runtimes/{osx-arm64,win-x64,browser-wasm}/native/`. `Engine.Boot` calls `NativeLibResolver.kick()` to force the static ctor before any P/Invoke runs.
 
+`libs/` holds two builds of every native lib: `runtimes-debug/` (zig Debug: sokol validation and asserts, UBSan, the D3D11 debug layer where Graphics Tools are installed) and `runtimes/` (ReleaseFast: what ships). `Zinc.csproj` copies one of them into the output's `libs/runtimes/` by build configuration (`ZincNativeLibFlavor`, overridable with `-p:`), so the resolver never knows which it got. A platform with no Release build yet falls back to its Debug one, and `Zinc.Publish.targets` warns when a publish ships that. Debug-only native code paths (anything under `SOKOL_DEBUG`) never reach players, so test the Release build before shipping.
+
 ## Publishing (`Zinc.Publish.targets`)
 
 Games import `Zinc.Publish.targets`. On a RID-specific publish it trims `libs/runtimes/` to that RID and writes `zinc.publish.json` into the publish folder: the contract with the [zinc CLI](https://github.com/zinc-framework/Zinc.Cli) (`zinc package`), recording what was built, which folders are native code, and the game's `ZincAppName` / `ZincBundleId` / `ZincAppIcon` and `ZincEntitlement` items (macOS hardened-runtime entitlements beyond `allow-jit`). Change the layout there, not in the CLI, and bump its `schema` when the CLI has to change with it.
