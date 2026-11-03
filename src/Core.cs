@@ -407,6 +407,7 @@ public static partial class Engine
                 desc.height = opts.height;
                 desc.icon.sokol_default = 1;
                 desc.fullscreen = (byte)(opts.fullscreen ? 1 : 0);
+                desc.high_dpi = (byte)(opts.highDpi ? 1 : 0);
                 if (Window.Transparent)
                 {
                     // premultiplied-alpha compositing with whatever is behind the window
@@ -529,6 +530,7 @@ public static partial class Engine
         // real window in step from the very first application.
         _windowCreated = true;
         ApplyWindowOptions(Window);
+        WarnIfTransparentWindowUnstretched();
         ImGuiDockSpace = _wantImGuiDockSpace;
         
         sgimgui_desc_t sg_imgui_desc = default;
@@ -651,8 +653,29 @@ public static partial class Engine
         }
     }
 
+    // A transparent window on Windows is shown through DirectComposition, which puts the swapchain on
+    // screen at its own size rather than stretching it over the window the way an ordinary window's
+    // is. Without RunOptions.highDpi the swapchain is the window divided by the display scale, so
+    // above 100% the image covers only the window's top-left corner. Said once, at startup, because
+    // from inside the app nothing about it looks wrong: the sizes all agree with each other.
+    static void WarnIfTransparentWindowUnstretched()
+    {
+        if (!OperatingSystem.IsWindows() || !Window.Transparent) { return; }
+        if (!DesktopWindow.GetClientSize(out var clientW, out var clientH)) { return; }
+        int renderW = App.width(), renderH = App.height();
+        if (clientW == renderW && clientH == renderH) { return; }
+        Console.WriteLine(
+            $"[Window] Transparent, but rendering {renderW}x{renderH} for a {clientW}x{clientH} window (the display is " +
+            "scaled), which Windows won't stretch: only the top-left corner gets drawn. Set RunOptions.highDpi.");
+    }
+
     public static int Width;
     public static int Height;
+    /// <summary>
+    /// How much the OS is scaling the screen: 1.5 at Windows' 150%, 2 on a Retina Mac. Only with
+    /// RunOptions.highDpi on; without it the OS does the scaling and this is 1. Read once, at
+    /// startup, so it misses the display scale changing while the app runs.
+    /// </summary>
     public static float DPIScale;
 
     private static float angle_deg = 0;

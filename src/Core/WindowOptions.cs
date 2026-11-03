@@ -18,7 +18,8 @@ public static partial class Engine
     /// Composited, see-through background: the framebuffer is cleared to fully transparent
     /// each frame and whatever is behind the window shows through wherever nothing is drawn.
     /// Windows (D3D11, via DirectComposition) and macOS (Metal); elsewhere the window stays
-    /// opaque and everything else still works.
+    /// opaque and everything else still works. On Windows pair it with RunOptions.highDpi, or a
+    /// display scaled above 100% gets the image in only the window's top-left corner.
     ///
     /// Unlike the other fields this is fixed when the window is created — it feeds
     /// sapp_desc.composite_mode, which sokol_app reads once — so ApplyWindowOptions can't

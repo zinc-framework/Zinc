@@ -274,7 +274,8 @@ public static unsafe class DesktopWindow
 
     /// <summary>
     /// The drawable area, in physical pixels - so NOT <see cref="Engine.Width"/>, which is the
-    /// framebuffer size and only equals this when the display is at 100% scaling. The ratio
+    /// framebuffer size and only equals this when the display is at 100% scaling or on Windows
+    /// with RunOptions.highDpi on. The ratio
     /// between the two is the window scale, which is how callers convert between the space the
     /// engine renders in and the space the desktop is measured in.
     /// </summary>
