@@ -413,6 +413,12 @@ public static partial class Engine
                     // premultiplied-alpha compositing with whatever is behind the window
                     desc.composite_mode = sapp_composite_mode.SAPP_COMPOSITEMODE_PREMULTIPLIED;
                 }
+                // macOS: with display sync on, -[CAMetalLayer nextDrawable] blocks the main thread
+                // for most of each frame, and the input events wait behind it (floooh/sokol#1344).
+                // On a 120Hz M1 Pro with Tahoe 26.5 the main thread spent 92-94% of its time there,
+                // and about 10% with it off. The display link already paces frames. Other platforms
+                // ignore this field.
+                desc.metal.disable_display_sync = 1;
                 desc.window_title = (sbyte*)ptr;
                 desc.init_cb = &Initialize;
                 desc.event_cb = &Event;
